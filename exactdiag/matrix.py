@@ -7,9 +7,8 @@
 """Methods and objects for handling dense and sparse matrices."""
 
 import numpy as np
+import scipy
 from scipy import linalg as la
-import scipy.sparse
-from typing import NamedTuple
 from functools import partial
 from abc import ABC, abstractmethod
 from matplotlib import colors
@@ -32,7 +31,6 @@ __all__ = [
     "Decomposition",
     "QR",
     "SVD",
-    "EigenState",
 ]
 
 transpose = partial(np.swapaxes, axis1=-2, axis2=-1)
@@ -53,10 +51,17 @@ class MidpointNormalize(colors.Normalize):
 
     def __call__(self, value, clip=None):
         # calculates the values of the colors vmin and vmax are assigned to
-        vmin = (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))) / 2
-        vmax = (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))) / 2
-        normalized_min = max(0, vmin)
-        normalized_max = min(1, vmax)
+        try:
+            vmin2 = 1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))
+        except ZeroDivisionError:
+            vmin2 = -1
+        try:
+            vmax2 = 1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))
+        except ZeroDivisionError:
+            vmax2 = 1
+
+        normalized_min = max(0, vmin2 / 2)
+        normalized_max = min(1, vmax2 / 2)
         normalized_mid = 0.5
         result, is_scalar = self.process_value(value)
         # data values
@@ -133,13 +138,13 @@ def matshow(
             for j in range(mat.shape[1]):
                 val = mat[i, j]
                 if val:
-                    center = np.array([i, j])
+                    center = np.array([j, i])
                     ax.text(*center, s=f"{val:.{dec}f}", va="center", ha="center")
 
     if colorbar:
         fig.colorbar(im, ax=ax)
 
-    if max(mat.shape) < 20:
+    if max(mat.shape) < 100:
         ax.set_xticks(np.arange(0, mat.shape[0], 1))
         ax.set_yticks(np.arange(0, mat.shape[1], 1))
         if ticklabels is not None:
@@ -682,11 +687,3 @@ class QR(MatrixDecomposition):
 
     def __iter__(self):
         return self.q, self.r
-
-
-class EigenState(NamedTuple):
-
-    energy: float = np.infty
-    state: np.ndarray = None
-    n_up: int = None
-    n_dn: int = None
