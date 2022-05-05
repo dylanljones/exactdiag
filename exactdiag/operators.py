@@ -17,6 +17,7 @@ __all__ = [
     "LinearOperator",
     "CreationOperator",
     "AnnihilationOperator",
+    "HamiltonOperator",
 ]
 
 
@@ -217,3 +218,33 @@ class AnnihilationOperator(LinearOperator):
 
     def _adjoint(self):
         return CreationOperator(self.sector_m1, self.sector, self.pos, self.sigma)
+
+
+class HamiltonOperator(LinearOperator):
+    """Hamiltonian as LinearOperator."""
+
+    def __init__(self, size, data, indices, dtype=None):
+        data = np.asarray(data)
+        indices = np.asarray(indices)
+        if dtype is None:
+            dtype = data.dtype
+        super().__init__((size, size), dtype=dtype)
+        self.data = data
+        self.indices = indices.T
+
+    def _matvec(self, x) -> np.ndarray:
+        matvec = np.zeros_like(x)
+        for (row, col), val in zip(self.indices, self.data):
+            matvec[col] += val * x[row]
+        return matvec
+
+    def _adjoint(self) -> "HamiltonOperator":
+        """Hamiltonian is hermitian."""
+        return self
+
+    def _trace(self) -> float:
+        """More efficient trace."""
+        # Check elements where the row equals the column
+        indices = np.where(self.indices[:, 0] == self.indices[:, 1])[0]
+        # Return sum of diagonal elements
+        return float(np.sum(self.data[indices]))
