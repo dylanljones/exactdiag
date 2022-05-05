@@ -6,7 +6,7 @@
 
 import numpy as np
 from bisect import bisect_left
-from typing import Union, Callable, Iterable, Sequence
+from typing import Union, Sequence
 from .basis import occupations, overlap
 
 __all__ = [
@@ -37,8 +37,8 @@ def project_up(
     up_idx : int
         The index of the up-state to project.
     num_dn_states : int
-        The total number of spin-down states of the basis(-sector).
-    dn_indices: int or (N) np.ndarray
+        The number N of spin-down states of the basis(-sector).
+    dn_indices : int or (N, ) np.ndarray
         An array of the indices of all spin-down states in the basis(-sector).
 
     Returns
@@ -52,6 +52,7 @@ def project_up(
     >>> all_dn = np.arange(4)
     >>> project_up(0, num_dn, all_dn)
     array([0, 1, 2, 3])
+
     >>> project_up(1, num_dn, all_dn)
     array([4, 5, 6, 7])
     """
@@ -65,11 +66,11 @@ def project_dn(
 
     Parameters
     ----------
-    dn_idx: int
+    dn_idx : int
         The index of the down-state to project.
-    num_dn_states: int
-        The total number of spin-down states of the basis(-sector).
-    up_indices: int or (N) np.ndarray
+    num_dn_states : int
+        The number N of spin-down states of the basis(-sector).
+    up_indices : int or (N, ) np.ndarray
         An array of the indices of all spin-up states in the basis(-sector).
 
     Returns
@@ -83,6 +84,7 @@ def project_dn(
     >>> all_up = np.arange(4)
     >>> project_dn(0, num_dn, all_up)
     array([ 0,  4,  8, 12])
+
     >>> project_dn(1, num_dn, all_up)
     array([ 1,  5,  9, 13])
     """
@@ -102,23 +104,23 @@ def project_elements_up(
     ----------
     up_idx : int
         The index of the up-state to project.
-    num_dn_states: int
+    num_dn_states : int
         The total number of spin-down states of the basis(-sector).
-    dn_indices: int or np.ndarray
+    dn_indices : int or np.ndarray
         An array of the indices of all spin-down states in the basis(-sector).
-    value: float or complex
+    value : float or complex
         The value to project.
-    target: int or np.ndarray, optional
+    target : int or np.ndarray, optional
         The target index/indices for the projection. This is only needed
         for non-diagonal elements.
 
     Yields
     -------
-    row: int
+    row : int
         The row-index of the element.
-    col: int
+    col : int
         The column-index of the element.
-    value: float or complex
+    value : float or complex
         The value of the matrix-element.
 
     Examples
@@ -130,16 +132,19 @@ def project_elements_up(
            [1, 1, 1],
            [2, 2, 1],
            [3, 3, 1]])
+
     >>> np.array(list(project_elements_up(0, num_dn, all_dn, value=1, target=1)))
     array([[0, 4, 1],
            [1, 5, 1],
            [2, 6, 1],
            [3, 7, 1]])
+
     >>> np.array(list(project_elements_up(1, num_dn, all_dn, value=1)))
     array([[4, 4, 1],
            [5, 5, 1],
            [6, 6, 1],
            [7, 7, 1]])
+
     >>> np.array(list(project_elements_up(1, num_dn, all_dn, value=1, target=2)))
     array([[ 4,  8,  1],
            [ 5,  9,  1],
@@ -170,25 +175,25 @@ def project_elements_dn(
 
     Parameters
     ----------
-    dn_idx: int
+    dn_idx : int
         The index of the down-state to project.
-    num_dn_states: int
+    num_dn_states : int
         The total number of spin-down states of the basis(-sector).
-    up_indices: int or np.ndarray
+    up_indices : int or np.ndarray
         An array of the indices of all spin-up states in the basis(-sector).
-    value: float or complex
+    value : float or complex
         The value to project.
-    target: int or np.ndarray, optional
+    target : int or np.ndarray, optional
         The target index/indices for the projection. This is only needed
         for non-diagonal elements.
 
     Yields
     -------
-    row: int
+    row : int
         The row-index of the element.
-    col: int
+    col : int
         The column-index of the element.
-    value: float or complex
+    value : float or complex
         The value of the matrix-element.
 
     Examples
@@ -200,21 +205,25 @@ def project_elements_dn(
            [ 4,  4,  1],
            [ 8,  8,  1],
            [12, 12,  1]])
+
     >>> np.array(list(project_elements_dn(0, num_dn, all_up, value=1, target=1)))
     array([[ 0,  1,  1],
            [ 4,  5,  1],
            [ 8,  9,  1],
            [12, 13,  1]])
+
     >>> np.array(list(project_elements_dn(1, num_dn, all_up, value=1)))
     array([[ 1,  1,  1],
            [ 5,  5,  1],
            [ 9,  9,  1],
            [13, 13,  1]])
+
     >>> np.array(list(project_elements_dn(1, num_dn, all_up, value=1, target=2)))
     array([[ 1,  2,  1],
            [ 5,  6,  1],
            [ 9, 10,  1],
            [13, 14,  1]])
+
     """
     if not value:
         return
@@ -248,12 +257,31 @@ def onsite_energy(
 
     Yields
     ------
-    row: int
+    row : int
         The row-index of the on-site energy.
-    col: int
+    col : int
         The column-index of the on-site energy.
-    value: float
+    value : float
         The on-site energy.
+
+    Examples
+    --------
+    >>> from exactdiag import Basis
+    >>> basis = Basis(num_sites=2)
+    >>> sector = basis.get_sector(n_up=1, n_dn=1)
+    >>> energies = [1.0, 2.0]
+    >>> ham = np.zeros((sector.size, sector.size))
+    >>> for i, j, val in onsite_energy(sector.up_states, sector.dn_states, energies):
+    ...     ham[i, j] += val
+    >>> ham
+    array([[2., 0., 0., 0.],
+           [0., 3., 0., 0.],
+           [0., 0., 3., 0.],
+           [0., 0., 0., 4.]])
+
+    >>> from exactdiag import matshow
+    >>> matshow(ham, ticklabels=sector.state_labels(), values=True)
+
     """
     num_dn = len(dn_states)
     all_up, all_dn = np.arange(len(up_states)), np.arange(num_dn)
@@ -285,12 +313,31 @@ def hubbard_interaction(
 
     Yields
     ------
-    row: int
+    row : int
         The row-index of the on-site interaction.
-    col: int
+    col : int
         The column-index of the on-site interaction.
-    value: float
+    value : float
         The on-site interaction.
+
+    Examples
+    --------
+    >>> from exactdiag import Basis
+    >>> basis = Basis(num_sites=2)
+    >>> sector = basis.get_sector(n_up=1, n_dn=1)
+    >>> inter = [1.0, 2.0]
+    >>> ham = np.zeros((sector.size, sector.size))
+    >>> for i, j, val in hubbard_interaction(sector.up_states, sector.dn_states, inter):
+    ...     ham[i, j] += val
+    >>> ham
+    array([[1., 0., 0., 0.],
+           [0., 0., 0., 0.],
+           [0., 0., 0., 0.],
+           [0., 0., 0., 2.]])
+
+    >>> from exactdiag import matshow
+    >>> matshow(ham, ticklabels=sector.state_labels(), values=True)
+
     """
     num_dn = len(dn_states)
     for up_idx, up in enumerate(up_states):
@@ -332,7 +379,13 @@ def _compute_hopping_term(states, site1, site2, hop):
             yield i, j, sign * hop
 
 
-def hopping(up_states, dn_states, site1, site2, hop=1.0):
+def hopping(
+    up_states: Sequence[int],
+    dn_states: Sequence[int],
+    site1: int,
+    site2: int,
+    hop: float,
+):
     """Projects the hopping between two sites onto full basis.
 
     Parameters
@@ -352,12 +405,30 @@ def hopping(up_states, dn_states, site1, site2, hop=1.0):
 
     Yields
     ------
-    row: int
+    row : int
         The row-index of the hopping element.
-    col: int
+    col : int
         The column-index of the hopping element.
-    value: float
+    value : float
         The hopping energy.
+
+    Examples
+    --------
+    >>> from exactdiag import Basis
+    >>> basis = Basis(num_sites=2)
+    >>> sector = basis.get_sector(n_up=1, n_dn=1)
+    >>> ham = np.zeros((sector.size, sector.size))
+    >>> for i, j, val in hopping(sector.up_states, sector.dn_states, 0, 1, hop=1.0):
+    ...     ham[i, j] += val
+    >>> ham
+    array([[0., 1., 1., 0.],
+           [1., 0., 0., 1.],
+           [1., 0., 0., 1.],
+           [0., 1., 1., 0.]])
+
+    >>> from exactdiag import matshow
+    >>> matshow(ham, ticklabels=sector.state_labels(), values=True)
+
     """
     if site1 > site2:
         raise ValueError("The first site index must be smaller than the second one!")
@@ -370,125 +441,3 @@ def hopping(up_states, dn_states, site1, site2, hop=1.0):
 
     for idx, target, amp in _compute_hopping_term(dn_states, site1, site2, hop):
         yield from project_elements_dn(idx, num_dn, all_up, amp, target=target)
-
-
-def _hopping_candidates(num_sites, state, pos):
-    results = []
-    op = 1 << pos
-    occ = state & op
-    sign_to = 1
-    sign_from = 1
-    tmp = state ^ op  # Annihilate or create electron at `pos`
-    for pos2 in range(num_sites):
-        if pos >= pos2:
-            continue
-        op2 = 1 << pos2
-        occ2 = state & op2
-
-        # Hopping from `pos` to `pos2` possible
-        if occ and not occ2:
-            new = tmp ^ op2
-            results.append((pos2, new, sign_to))
-        else:  # state filled, no hopping but sign change
-            sign_to *= -1
-
-        # Hopping from `pos2` to `pos` possible
-        if not occ and occ2:
-            new = tmp ^ op2
-            results.append((pos2, new, sign_from))
-            sign_from *= -1  # if this site is jumped over sign changes
-    return results
-
-
-def _compute_hopping(num_sites, states, pos, hop):
-    for i, state in enumerate(states):
-        for pos2, new, sign in _hopping_candidates(num_sites, state, pos):
-            try:
-                t = hop(pos, pos2)
-            except TypeError:
-                t = hop
-            if t:
-                j = bisect_left(states, new)
-                value = sign * t
-                yield i, j, value
-
-
-def site_hoppings(
-    up_states: Sequence[int],
-    dn_states: Sequence[int],
-    num_sites: int,
-    hop: Union[Callable, Iterable, float],
-    pos: int,
-):
-    """Projects the hopping of a single site of a many-body Hamiltonian onto full basis.
-
-    Parameters
-    ----------
-    up_states : array_like
-        An array of all spin-up states in the basis(-sector).
-    dn_states : array_like
-        An array of all spin-down states in the basis(-sector).
-    num_sites : int
-        The number of sites in the model.
-    hop : callable or array_like
-        An iterable or callable defining the hopping energy. If a callable is used
-        the two positions of the hopping elements are passed to the method. Otherwise,
-        the positions are used as indices.
-    pos : int
-        The index of the position considered in the hopping processes.
-
-    Yields
-    ------
-    row: int
-        The row-index of the hopping element.
-    col: int
-        The column-index of the hopping element.
-    value: float
-        The hopping energy.
-    """
-    num_dn = len(dn_states)
-    all_up, all_dn = np.arange(len(up_states)), np.arange(num_dn)
-
-    for up_idx, target, amp in _compute_hopping(num_sites, up_states, pos, hop):
-        yield from project_elements_up(up_idx, num_dn, all_dn, amp, target=target)
-
-    for dn_idx, target, amp in _compute_hopping(num_sites, dn_states, pos, hop):
-        yield from project_elements_dn(dn_idx, num_dn, all_up, amp, target=target)
-
-
-def hoppings(
-    up_states: Sequence[int],
-    dn_states: Sequence[int],
-    num_sites: int,
-    hop: Union[Callable, Iterable, float],
-):
-    """Projects the hopping of all sites of a many-body Hamiltonian onto full basis.
-
-    Parameters
-    ----------
-    up_states : array_like
-        An array of all spin-up states in the basis(-sector).
-    dn_states : array_like
-        An array of all spin-down states in the basis(-sector).
-    num_sites : int
-        The number of sites in the model.
-    hop : callable or array_like
-        An iterable or callable defining the hopping energy. If a callable is used
-        the two positions of the hopping elements are passed to the method. Otherwise,
-        the positions are used as indices.
-
-    See Also
-    --------
-    project_site_hopping
-
-    Yields
-    ------
-    row: int
-        The row-index of the hopping element.
-    col: int
-        The column-index of the hopping element.
-    value: float
-        The hopping energy.
-    """
-    for pos in range(num_sites):
-        yield from site_hoppings(up_states, dn_states, num_sites, hop, pos)
