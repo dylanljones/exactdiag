@@ -6,6 +6,7 @@
 
 import numpy as np
 from typing import NamedTuple
+from scipy import linalg as la
 from scipy.sparse import linalg as sla
 
 
@@ -18,17 +19,34 @@ class EigenState(NamedTuple):
     n_dn: int = None
 
 
-def compute_ground_state(basis, sham_func, *args, thresh=20, **kwargs):
+def compute_ground_state(basis, model, thresh=20):
+    """Computes the ground state by iterating over the sectors of the Hamiltonian.
+
+    Parameters
+    ----------
+    basis : Basis
+        The many body state basis of the system.
+    model : Model
+        The model instance responsible for generating the Hamiltonian matrix.
+    thresh : int, optional
+        The sector size threshold after which scipy's sparse linear algebra methods are
+        used instead of the dense methods.
+
+    Returns
+    -------
+    gs : EigenState
+        The ground eigen state.
+    """
     gs = EigenState()
     for sector in basis.iter_sectors():
-        sham = sham_func(sector, *args, **kwargs)
+        sham = model.shamiltonian(sector)
         if sham.shape[0] == 1:
             # 1x1 matrix: eigenvalue problem trivial
             energy = sham[0, 0]
             state = np.array([1])
         elif 1 < sham.shape[0] <= thresh:
             # small matrix: solve full eigenvalue problem.
-            energies, vectors = np.linalg.eigh(sham.toarray())
+            energies, vectors = la.eigh(sham.toarray())
             idx = np.argmin(energies)
             energy, state = energies[idx], vectors[:, idx]
         else:
@@ -40,15 +58,31 @@ def compute_ground_state(basis, sham_func, *args, thresh=20, **kwargs):
     return gs
 
 
-def solve_ground_state(basis, sham_func, *args, thresh=20, **kwargs):
+def solve_ground_state(basis, model, thresh=20):
+    """Computes the ground state by solving the full Hamiltonian.
+
+    Parameters
+    ----------
+    basis : Basis
+        The many body state basis of the system.
+    model : Model
+        The model instance responsible for generating the Hamiltonian matrix.
+    thresh : int, optional
+        The sector size threshold after which scipy's sparse linear algebra methods are
+        used instead of the dense methods.
+
+    Returns
+    -------
+    gs : EigenState
+        The ground eigen state.
+    """
     sector = basis.get_sector()
-    sham = sham_func(sector, *args, **kwargs)
+    sham = model.shamiltonian(sector)
     if sham.shape[0] <= thresh:
-        energies, vectors = np.linalg.eigh(sham.toarray())
+        energies, vectors = la.eigh(sham.toarray())
         idx = np.argmin(energies)
         energy, state = energies[idx], vectors[:, idx]
     else:
         energies, vectors = sla.eigsh(sham, k=1, which="SA")
         energy, state = energies[0], vectors[:, 0]
-
     return EigenState(energy, state)

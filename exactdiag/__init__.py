@@ -33,7 +33,7 @@ from .matrix import (
 )
 
 from .operators import LinearOperator, CreationOperator, AnnihilationOperator
-
+from .model import ModelParameters, Model
 
 try:
     from ._version import version as __version__
