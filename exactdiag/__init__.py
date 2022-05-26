@@ -49,6 +49,7 @@ from .operators import (
     LinearOperator,
     CreationOperator,
     AnnihilationOperator,
+    HamiltonOperator,
 )
 from exactdiag.models.abc import ModelParameters, AbstractManyBodyModel
 from .greens import gf0_pole, gf_lehmann, gf_greater, gf_lesser, gf_tevo
