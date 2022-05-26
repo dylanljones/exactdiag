@@ -64,7 +64,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest exactdiag/ --cov=exactdiag --cov-report=xml -v
+        pytest tests/ --cov=exactdiag --cov-report=xml -v
 
 #    - name: Upload coverage to Codecov
 #      uses: codecov/codecov-action@v2
