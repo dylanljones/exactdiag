@@ -6,13 +6,17 @@
 
 import json
 import numpy as np
-from scipy.sparse import csr_matrix
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 from collections.abc import MutableMapping
-from typing import Any, Dict, Iterator
-from .operators import HamiltonOperator
-from . import project
+from typing import Any, Dict, Iterator, List
+from .basis import Basis
+from .operators import (
+    HamiltonOperator,
+    project_onsite_energy,
+    project_hopping,
+    project_hubbard_inter,
+)
 
 
 class ModelParameters(MutableMapping):
@@ -158,65 +162,128 @@ class ModelParameters(MutableMapping):
         return f"{self.__class__.__name__}({self.pformat()})"
 
 
-class Model(ModelParameters, ABC):
-    def __init__(self, **params):
+class AbstractManyBodyModel(ModelParameters, ABC):
+    """Abstract base class for model classes with a state basis.
+
+    The AbstractModel-class derives from ModelParameters.
+    All parameters are accessable as attributes or dictionary-items.
+    """
+
+    def __init__(self, num_sites=0, **params):
+        """Initializes the AbstractModel-instance with the given initial parameters.
+
+        Parameters
+        ----------
+        **params: Initial parameters of the model.
+        """
         ModelParameters.__init__(self, **params)
+        ABC.__init__(self)
+        self.basis: Basis = Basis()
+        self.init_basis(num_sites)
 
-    @abstractmethod
-    def hamiltonian_data(self, sector):
-        pass
-
-    def hamiltonian(self, sector, dtype=None):
-        size = sector.size
-        ham = np.zeros((size, size), dtype=dtype)
-        for i, j, val in self.hamiltonian_data(sector):
-            ham[i, j] += val
-        return ham
-
-    def shamiltonian(self, sector, dtype=None):
-        size = sector.size
-        rows, cols, data = list(), list(), list()
-        for i, j, val in self.hamiltonian_data(sector):
-            rows.append(i)
-            cols.append(j)
-            data.append(val)
-        return csr_matrix((data, (rows, cols)), shape=(size, size), dtype=dtype)
-
-    def hamilton_operator(self, sector, dtype=None):
-        size = sector.size
-        rows, cols, data = list(), list(), list()
-        for i, j, val in self.hamiltonian_data(sector):
-            rows.append(i)
-            cols.append(j)
-            data.append(val)
-        return HamiltonOperator(size, data, (rows, cols), dtype=dtype)
-
-
-class TightBindingModel(Model):
-    def __init__(self):
-        pass
-
-
-class HubbardModel(Model):
-    def __init__(self, latt, u=0.0, eps=None, hop=1.0):
-        if eps is None:
-            eps = -u / 2
-        super().__init__(u=u, eps=eps, hop=hop)
-        self.latt = latt
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({ModelParameters.__str__(self)})"
 
     @property
-    def num_sites(self):
-        return self.latt.num_sites
+    def num_sites(self) -> int:
+        return self.basis.num_sites
 
-    def hamiltonian_data(self, sector):
-        num_sites = sector.num_sites
-        up_states = sector.up_states
-        dn_states = sector.dn_states
-        energy = np.full(num_sites, fill_value=self.eps)
-        hub_inter = np.full(num_sites, fill_value=self.u)
+    @property
+    def fillings(self) -> List[int]:
+        return self.basis.fillings
 
-        yield from project.onsite_energy(up_states, dn_states, energy)
-        yield from project.hubbard_interaction(up_states, dn_states, hub_inter)
-        for i in range(self.latt.num_sites):
-            for j in self.latt.nearest_neighbors(i, unique=True):
-                yield from project.hopping(up_states, dn_states, i, j, self.hop)
+    def init_basis(self, num_sites, init_sectors=None):
+        self.basis.init(num_sites, init_sectors)
+
+    def iter_fillings(self):
+        return self.basis.iter_fillings()
+
+    def iter_sectors(self):
+        return self.basis.iter_sectors()
+
+    def get_sector(self, n_up=None, n_dn=None):
+        return self.basis.get_sector(n_up, n_dn)
+
+    @abstractmethod
+    def _hamiltonian_data(self, up_states, dn_states):
+        pass
+
+    def hamiltonian_data(self, up_states, dn_states):
+        rows, cols, data = list(), list(), list()
+        for row, col, val in self._hamiltonian_data(up_states, dn_states):
+            rows.append(row)
+            cols.append(col)
+            data.append(val)
+        return data, np.array([rows, cols], dtype=np.int64)
+
+    def hamilton_operator(self, n_up=None, n_dn=None, sector=None, dtype=None):
+        if sector is None:
+            sector = self.basis.get_sector(n_up, n_dn)
+        up_states, dn_states = sector.up_states, sector.dn_states
+        size = len(up_states) * len(dn_states)
+        data, indices = self.hamiltonian_data(up_states, dn_states)
+        return HamiltonOperator(size, data, indices, dtype=dtype)
+
+    def hamiltonian(self, n_up=None, n_dn=None, sector=None, dtype=None):
+        hamop = self.hamilton_operator(n_up, n_dn, sector, dtype)
+        return hamop.toarray()
+
+
+class HubbardModel(AbstractManyBodyModel):
+    """Model class for the Hubbard model.
+
+    The Hamiltonian of the Hubbard model is defined as
+    .. math::
+        H = U Σ_i n_{i↑}n_{i↓} + Σ_{iσ} ε_i c^†_{iσ}c_{iσ} + t Σ_{i,j,σ} c^†_{iσ}c_{jσ}
+
+    Attributes
+    ----------
+    inter : float or Sequence, optional
+        The onsite interaction energy of the model. The default value is ``2``.
+    eps : float or Sequence, optional
+        The onsite energy of the model. The default value is ``0``.
+    eps_bath : float or Sequence, optional
+        The onsite energy of the model. The default value is ``0``.
+    hop : float or Sequence, optional
+        The hopping parameter of the model. The default value is ``1``.
+    mu : float, optional
+        The chemical potential. The default is ``0``.
+    """
+
+    def __init__(self, *args, inter=0.0, eps=0.0, hop=1.0, mu=0.0):
+        """Initializes the ``HubbardModel``."""
+        if len(args) == 1:
+            # Argument is a lattice instance
+            latt = args[0]
+            num_sites = latt.num_sites
+            neighbors = latt.neighbor_pairs(True)[0]
+        else:
+            # Aurgument is the number of sites and the neighbor data
+            num_sites, neighbors = args
+
+        super().__init__(num_sites, inter=inter, eps=eps, hop=hop, mu=mu)
+        self.neighbors = neighbors
+
+    def half_filling(self):
+        return self.hf()
+
+    def hf(self):
+        self.set_param("mu", self.inter / 2)
+        return self
+
+    def pformat(self):
+        return f"U={self.inter}, ε={self.eps}, t={self.hop}, μ={self.mu}"
+
+    def _hamiltonian_data(self, up_states, dn_states):
+        inter = self.inter
+        eps = self.eps - self.mu
+        hop = self.hop
+        num_sites = self.num_sites
+        neighbors = self.neighbors
+        energy = np.full(num_sites, eps)
+        interaction = np.full(num_sites, inter)
+
+        yield from project_onsite_energy(up_states, dn_states, energy)
+        yield from project_hubbard_inter(up_states, dn_states, interaction)
+        for i, j in neighbors:
+            yield from project_hopping(up_states, dn_states, num_sites, i, j, hop)

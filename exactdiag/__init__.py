@@ -4,6 +4,8 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
+from .utils import logger
+
 from .basis import (
     UP,
     DN,
@@ -29,11 +31,27 @@ from .matrix import (
     is_hermitian,
     diagonal,
     fill_diagonal,
-    Decomposition,
+    MatrixDecomposition,
+    EigenDecomposition,
+    QRDecomposition,
+    SVDDecomposition,
+    EigenState,
 )
 
-from .operators import LinearOperator, CreationOperator, AnnihilationOperator
-from .model import ModelParameters, Model
+from .operators import (
+    project_up,
+    project_dn,
+    project_elements_up,
+    project_elements_dn,
+    project_onsite_energy,
+    project_hubbard_inter,
+    project_hopping,
+    LinearOperator,
+    CreationOperator,
+    AnnihilationOperator,
+)
+from .model import ModelParameters, AbstractManyBodyModel
+from .greens import gf_lehmann, gf_greater, gf_lesser, gf_tevo
 
 try:
     from ._version import version as __version__
