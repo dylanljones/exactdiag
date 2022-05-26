@@ -8,7 +8,7 @@ import logging
 import numpy as np
 from numba import njit, prange
 from .basis import Sector, UP
-from .model import AbstractManyBodyModel
+from .models import AbstractManyBodyModel
 from .operators import AnnihilationOperator, CreationOperator
 from .linalg import compute_ground_state
 from ._expm_multiply import expm_multiply
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 _jitkw = dict(fastmath=True, nogil=True, parallel=True)
 
 
-def gf0_lehmann(*args, z, mu: float = 0.0, mode="diag") -> np.ndarray:
+def gf0_pole(*args, z, mode="diag") -> np.ndarray:
     """Calculate the non-interacting Green's function.
 
     Parameters
@@ -30,8 +30,6 @@ def gf0_lehmann(*args, z, mu: float = 0.0, mode="diag") -> np.ndarray:
         the calculation. The eigenvectors of the Hamiltonian.
     z : (..., Nw) complex np.ndarray or complex
         Green's function is evaluated at complex frequency `z`.
-    mu : float, optional
-        Chemical potential of the system.
     mode : str, optional
         The output mode of the method. Can either be 'full', 'diag' or 'total'.
         The default is 'diag'. Mode 'full' computes the full Green's function matrix,
@@ -61,7 +59,7 @@ def gf0_lehmann(*args, z, mu: float = 0.0, mode="diag") -> np.ndarray:
             f"Mode '{mode}' not supported. "
             f"Valid modes are 'full', 'diag' or 'total'"
         )
-    arg = np.subtract.outer(z + mu, eigvals)
+    arg = np.subtract.outer(z, eigvals)
     return np.einsum(subscript_str, eigvecs_adj, 1 / arg, eigvecs)
 
 

@@ -50,8 +50,8 @@ from .operators import (
     CreationOperator,
     AnnihilationOperator,
 )
-from .model import ModelParameters, AbstractManyBodyModel
-from .greens import gf_lehmann, gf_greater, gf_lesser, gf_tevo
+from exactdiag.models.abc import ModelParameters, AbstractManyBodyModel
+from .greens import gf0_pole, gf_lehmann, gf_greater, gf_lesser, gf_tevo
 
 try:
     from ._version import version as __version__

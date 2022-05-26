@@ -8,8 +8,8 @@ from pytest import mark
 from numpy.testing import assert_allclose
 import numpy as np
 import lattpy as lp
-from exactdiag.greens import gf0_lehmann, gf_lehmann
-from exactdiag.model import HubbardModel
+from exactdiag.greens import gf0_pole, gf_lehmann
+from exactdiag.models import HubbardModel
 
 
 def tight_binding_hamiltonian(latt, eps=0.0, hop=1.0):
@@ -36,7 +36,7 @@ def test_gf_lehmann_hubbard_non_interacting(num_sites):
     model = HubbardModel(num_sites, neighbors, eps=eps, hop=1.0)
 
     ham0 = tight_binding_hamiltonian(latt, eps=model.eps, hop=model.hop)
-    gf0_z_diag = gf0_lehmann(ham0, z=z)
+    gf0_z_diag = gf0_pole(ham0, z=z)
 
     gf0_z = gf0_z_diag[:, pos]
     gf_meas = gf_lehmann(model, z, beta=10, pos=pos, occ=False)
