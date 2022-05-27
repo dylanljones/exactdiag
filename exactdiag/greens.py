@@ -291,12 +291,11 @@ def gf_lehmann(model, z, beta, i=0, j=0, sigma=UP, eig_cache=None, occ=True):
         else:
             logger.debug("No upper sector, skipping")
 
-    logger.info("-" * 40)
-    logger.info("gs-energy:  %+.4f", data.gs_energy)
-    logger.info("occupation:  %.4f", data.occ)
-    logger.info("double-occ:  %.4f", data.occ_double)
-    logger.info("-" * 40)
-    return data
+    logger.info("gs-energy:   %+.4f", data.gs_energy)
+    if occ:
+        logger.info("occupation:  %.4f", data.occ)
+        logger.info("double-occ:  %.4f", data.occ_double)
+    return data.gf, data.occ, data.occ_double
 
 
 def gf_greater(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
