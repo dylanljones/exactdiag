@@ -265,7 +265,7 @@ class GreensFunctionMeasurement:
             self._acc_occ_double(up, dn, evals, evecs, factor)
 
 
-def gf_lehmann(model, z, beta, i=0, j=0, sigma=UP, eig_cache=None, occ=True):
+def gf_lehmann(model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True):
     if j is None:
         j = i
 
