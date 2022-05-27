@@ -675,27 +675,27 @@ def _apply_creation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
 
 
 @njit(fastmath=True, nogil=True)
-def _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_m1, pos):
+def _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
     op = 1 << pos
     all_dn = np.arange(num_dn)
-    for up_idx, up in enumerate(up_states):
+    for up_idx, up in enumerate(up_states_p1):
         if up & op:
             new = up ^ op
-            idx_new = bisect_left(up_states_m1, new)
+            idx_new = bisect_left(up_states, new)
             origins = up_idx * num_dn + all_dn
             targets = idx_new * num_dn + all_dn
             matvec[targets] = x[origins]
 
 
 @njit(fastmath=True, nogil=True)
-def _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_m1, pos):
+def _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
     op = 1 << pos
-    num_dn = len(dn_states)
+    num_dn = len(dn_states_p1)
     all_up = np.arange(num_up)
-    for dn_idx, dn in enumerate(dn_states):
+    for dn_idx, dn in enumerate(dn_states_p1):
         if dn & op:
             new = dn ^ op
-            idx_new = bisect_left(dn_states_m1, new)
+            idx_new = bisect_left(dn_states, new)
             origins = all_up * num_dn + dn_idx
             targets = all_up * num_dn + idx_new
             matvec[targets] = x[origins]
@@ -748,7 +748,7 @@ class CreationOperator(LinearOperator):
 class AnnihilationOperator(LinearOperator):
     """Fermionic annihilation operator as LinearOperator."""
 
-    def __init__(self, sector, sector_m1, pos=0, sigma=UP):
+    def __init__(self, sector_m1, sector, pos=0, sigma=UP):
         dim_origin = sector.size
         if sigma == UP:
             dim_target = sector_m1.num_up * sector.num_dn
@@ -767,15 +767,15 @@ class AnnihilationOperator(LinearOperator):
 
     def _build_up(self, matvec, x):
         num_dn = self.sector.num_dn
-        up_states = self.sector.up_states
-        up_states_m1 = self.sector_m1.up_states
-        _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_m1, self.pos)
+        up_states = self.sector_m1.up_states
+        up_states_p1 = self.sector.up_states
+        _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_p1, self.pos)
 
     def _build_dn(self, matvec, x):
         num_up = self.sector.num_up
-        dn_states = self.sector.dn_states
-        dn_states_m1 = self.sector_m1.dn_states
-        _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_m1, self.pos)
+        dn_states = self.sector_m1.dn_states
+        dn_states_p1 = self.sector.dn_states
+        _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, self.pos)
 
     def _matvec(self, x):
         matvec = np.zeros((self.shape[0], *x.shape[1:]), dtype=x.dtype)

@@ -128,7 +128,7 @@ def double_occupation(up_states, dn_states, evals, evecs, beta, emin, pos):
 
 
 @njit("void(c16[:], c16[:], f8[:], f8[:], f8[:, :], f8[:, :], f8, f8)", **_jitkw)
-def _accumulate_sum(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
+def _acc_gf_diag(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
     overlap = np.abs(evecs_p1.T.conj() @ cdag_evec) ** 2
 
     if np.isfinite(beta):
@@ -149,24 +149,52 @@ def _accumulate_sum(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
             gf += overlap[m, n] * weights / (z_m + eig_n)
 
 
-def accumulate_gf(gf, z, cdag, evals, evecs, evals_p1, evecs_p1, beta, emin=0.0):
+@njit("void(c16[:],c16[:],f8[:,:],f8[:,:],f8[:],f8[:,:],f8[:],f8[:,:],f8,f8)", **_jitkw)
+def _acc_gf(gf, z, c_evec_m, cdag_evec_n, evals_n, evecs_n, evals_m, evecs_m, beta, e0):
+    overlap1 = evecs_n.T.conj() @ c_evec_m  # <n|c_i|m>
+    overlap2 = evecs_m.T.conj() @ cdag_evec_n  # <m|c_j^†|n>
+
+    if np.isfinite(beta):
+        exp_n = np.exp(-beta * (evals_n - e0))
+        exp_m = np.exp(-beta * (evals_m - e0))
+    else:
+        exp_n = np.ones_like(evals_n)
+        exp_m = np.ones_like(evals_m)
+
+    num_n, num_m = len(evals_n), len(evals_m)
+    for m in prange(num_m):
+        z_m = z - evals_m[m]
+        for n in range(num_n):
+            overlap = overlap1[n, m] * overlap2[m, n]
+            weights = exp_n[n] + exp_m[m]
+            gf += overlap * weights / (z_m + evals_n[n])
+
+
+def accumulate_gf_diag(gf, z, cdag, evals, evecs, evals_p1, evecs_p1, beta, emin=0.0):
     cdag_evec = cdag.matmat(evecs)
-    return _accumulate_sum(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin)
+    _acc_gf_diag(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin)
+
+
+def accumulate_gf(gf, z, cop, cdag, evals, evecs, evals_p1, evecs_p1, beta, emin=0.0):
+    c_ev_m = cop.matmat(evecs_p1)
+    cd_ev_n = cdag.matmat(evecs)
+    _acc_gf(gf, z, c_ev_m, cd_ev_n, evals, evecs, evals_p1, evecs_p1, beta, emin)
 
 
 class GreensFunctionMeasurement:
-    def __init__(self, z, beta, pos=0, sigma=UP, dtype=None, measure_occ=True):
+    def __init__(self, z, beta, i=0, j=0, sigma=UP, dtype=None, measure_occ=True):
         self.z = z
         self.beta = beta
-        self.pos = pos
+        self.i = i
+        self.j = j
         self.sigma = sigma
         self._measure_occ = measure_occ
 
         self._part = 0
         self._gs_energy = np.infty
         self._gf = np.zeros_like(z, dtype=dtype)
-        self._occ = 0.0
-        self._occ_double = 0.0
+        self._occ = np.nan if i != j else 0.0
+        self._occ_double = np.nan if i != j else 0.0
 
     @property
     def part(self):
@@ -196,23 +224,28 @@ class GreensFunctionMeasurement:
         if factor != 1.0:
             self._gf *= factor
 
-        cdag = CreationOperator(sector, sector_p1, pos=self.pos, sigma=self.sigma)
+        gf = self._gf
         z = self.z
         beta = self.beta
         e0 = self._gs_energy
-        accumulate_gf(self._gf, z, cdag, evals, evecs, evals_p1, evecs_p1, beta, e0)
+        cdg = CreationOperator(sector, sector_p1, pos=self.j, sigma=self.sigma)
+        if self.i == self.j:
+            accumulate_gf_diag(gf, z, cdg, evals, evecs, evals_p1, evecs_p1, beta, e0)
+        else:
+            c = AnnihilationOperator(sector, sector_p1, pos=self.i, sigma=self.sigma)
+            accumulate_gf(gf, z, c, cdg, evals, evecs, evals_p1, evecs_p1, beta, e0)
 
     def _acc_occ(self, up, dn, evals, evecs, factor):
         beta = self.beta
         e0 = self._gs_energy
         self._occ *= factor
-        self._occ += occupation(up, dn, evals, evecs, beta, e0, self.pos, self.sigma)
+        self._occ += occupation(up, dn, evals, evecs, beta, e0, self.i, self.sigma)
 
     def _acc_occ_double(self, up, dn, evals, evecs, factor):
         beta = self.beta
         e0 = self._gs_energy
         self._occ_double *= factor
-        self._occ_double += double_occupation(up, dn, evals, evecs, beta, e0, self.pos)
+        self._occ_double += double_occupation(up, dn, evals, evecs, beta, e0, self.i)
 
     def accumulate(self, sector, sector_p1, evals, evecs, evals_p1, evecs_p1):
         min_energy = min(evals)
@@ -227,26 +260,28 @@ class GreensFunctionMeasurement:
         dn = np.array(sector.dn_states, dtype=np.int64)
         self._acc_part(evals, factor)
         self._acc_gf(sector, sector_p1, evals, evecs, evals_p1, evecs_p1, factor)
-        if self._measure_occ:
+        if self._measure_occ and self.i == self.j:
             self._acc_occ(up, dn, evals, evecs, factor)
             self._acc_occ_double(up, dn, evals, evecs, factor)
 
 
-def gf_lehmann(model, z, beta, pos=0, sigma=UP, eig_cache=None, occ=True):
+def gf_lehmann(model, z, beta, i=0, j=0, sigma=UP, eig_cache=None, occ=True):
+    if j is None:
+        j = i
+
     basis = model.basis
-
-    logger.info("Accumulating Lehmann sum (pos=%s, sigma=%s)", pos, sigma)
-    logger.debug("Sites: %s (%s states)", basis.num_sites, basis.size)
-
-    data = GreensFunctionMeasurement(z, beta, pos, sigma, measure_occ=occ)
     eig_cache = eig_cache if eig_cache is not None else dict()
 
+    logger.info("Accumulating Lehmann sum (i=%s, j=%s, sigma=%s)", i, j, sigma)
+    logger.debug("Sites: %s (%s states)", basis.num_sites, basis.size)
+
+    data = GreensFunctionMeasurement(z, beta, i, j, sigma, measure_occ=occ)
     fillings = list(basis.iter_fillings())
     num = len(fillings)
     w = len(str(num))
-    for i, (n_up, n_dn) in enumerate(fillings):
+    for it, (n_up, n_dn) in enumerate(fillings):
         sector = model.get_sector(n_up, n_dn)
-        logger.info("[%s/%s] Sector %s, %s", f"{i+1:>{w}}", num, n_up, n_dn)
+        logger.info("[%s/%s] Sector %s, %s", f"{it+1:>{w}}", num, n_up, n_dn)
 
         sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
         if sector_p1 is not None:
@@ -255,7 +290,6 @@ def gf_lehmann(model, z, beta, pos=0, sigma=UP, eig_cache=None, occ=True):
             data.accumulate(sector, sector_p1, eigvals, eigvecs, eigvals_p1, eigvecs_p1)
         else:
             logger.debug("No upper sector, skipping")
-            # eig_cache.clear()
 
     logger.info("-" * 40)
     logger.info("gs-energy:  %+.4f", data.gs_energy)
@@ -354,7 +388,7 @@ def gf_lesser(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
     if sector_m1 is None:
         return times, np.zeros_like(times)
 
-    cop = AnnihilationOperator(sector, sector_m1, pos=pos, sigma=sigma)
+    cop = AnnihilationOperator(sector_m1, sector, pos=pos, sigma=sigma)
     top_ket = cop.matvec(gs.state)  # T|gs>
     bra_top = top_ket.conj()  # <gs|T
 
