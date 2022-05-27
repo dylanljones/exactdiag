@@ -153,6 +153,20 @@ class CustomModel(ed.models.AbstractManyBodyModel):
         ...
 ````
 
+The Hamilton operator can then be acessed for the full basis or a specific sector
+in operator or matrix representation:
+````python
+model = ed.models.HubbardModel(num_sites=2, neighbors=[[0, 1]], inter=2)
+
+hamop = model.hamilton_operator(n_up=1, n_dn=1)
+
+sector = model.basis.get_sector()
+ham = model.hamiltonian(sector=sector)
+ed.matshow(ham, ticklabels=sector.state_labels())
+````
+<p align="center">
+  <img src="examples/hubbard_ham.png" alt="Sublime's custom image"/>
+</p>
 
 ### Green's function
 
@@ -160,7 +174,6 @@ Using a custom defined model or one of the included models the Green's function 
 ````python
 import numpy as np
 import lattpy as lp
-import matplotlib.pyplot as plt
 import exactdiag as ed
 
 num_sites = 5
