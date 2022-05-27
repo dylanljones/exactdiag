@@ -39,8 +39,7 @@ def test_gf_lehmann_hubbard_non_interacting(num_sites):
     gf0_z_diag = gf0_pole(ham0, z=z)
 
     gf0_z = gf0_z_diag[:, pos]
-    gf_meas = gf_lehmann(model, z, beta=10, pos=pos, occ=False)
-    gf_z = gf_meas.gf
+    gf_z = gf_lehmann(model, z, beta=10, i=pos, j=pos, occ=False)[0]
 
     assert_allclose(gf_z, gf0_z, rtol=1e-4, atol=1e-3)
 
@@ -58,8 +57,7 @@ def test_gf_lehmann_hubbard_atomic_limit(num_sites, u):
     neighbors, _ = latt.neighbor_pairs(unique=True)
     model = HubbardModel(num_sites, neighbors, inter=u, mu=u / 2, hop=0.0)
     for pos in range(num_sites):
-        gf_meas = gf_lehmann(model, z, beta=10, pos=pos, occ=False)
-        gf_z = gf_meas.gf
+        gf_z = gf_lehmann(model, z, beta=10, i=pos, j=pos, occ=False)[0]
 
         c = len(z) // 2
         gf_neg = -gf_z.imag[:c]
@@ -90,6 +88,5 @@ def test_gf_lehmann_hubbard_occupation(num_sites, u):
     neighbors, _ = latt.neighbor_pairs(unique=True)
     model = HubbardModel(num_sites, neighbors, inter=u, mu=u / 2, hop=1.0)
     for pos in range(num_sites):
-        gf_meas = gf_lehmann(model, z, beta=10, pos=pos, occ=True)
-        occ = gf_meas.occ
+        occ = gf_lehmann(model, z, beta=10, i=pos, j=pos, occ=True)[1]
         assert abs(occ - 0.5) < 1e-3
