@@ -24,7 +24,7 @@ pip install .
 ## 🚀 Quick-Start
 
 
-#### Basis
+### Basis
 
 A ``Basis`` object can be initalized with the number of sites in the (many-body) system:
 
@@ -68,7 +68,7 @@ Each ``SpinState`` provides methods for optaining information about the state, f
 `````
 
 
-#### Operators
+### Operators
 
 The ``operators``-module provides the base-class ``LinearOperator`` based on ``scipy.LinearOperator``.
 A simple sparse implementation of a Hamiltonian is also included.
@@ -122,7 +122,7 @@ for i, j, val in hubbard_hamiltonian_data(sector):
 hamop = ed.HamiltonOperator(sector.size, data, (rows, cols))
 ````
 
-#### Models
+### Models
 
 Some methods require a model object to work. Users can define their own
 models or use one of the following included models:
@@ -154,7 +154,7 @@ class CustomModel(ed.models.AbstractManyBodyModel):
 ````
 
 
-#### Green's function
+### Green's function
 
 Using a custom defined model or one of the included models the Green's function can be computed:
 ````python
