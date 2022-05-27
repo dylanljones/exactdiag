@@ -20,5 +20,5 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 # Set logging level
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 logging.root.setLevel(logging.NOTSET)
