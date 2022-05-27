@@ -165,7 +165,7 @@ ham = model.hamiltonian(sector=sector)
 ed.matshow(ham, ticklabels=sector.state_labels())
 ````
 <p align="center">
-  <img src="examples/hubbard_ham.png" alt="Sublime's custom image"/>
+  <img src="examples/hubbard_ham.png" width=400 alt="Sublime's custom image"/>
 </p>
 
 ### Green's function
