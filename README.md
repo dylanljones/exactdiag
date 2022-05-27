@@ -1,6 +1,7 @@
 # Exact diagonalization
 
 [![Tests][tests-badge]][tests-url]
+[![License: MIT][license-badge]][license-url]
 [![Code style: black][black-badge]][black-url]
 
 
