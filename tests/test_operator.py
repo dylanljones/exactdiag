@@ -5,10 +5,11 @@
 # Copyright (c) 2022, Dylan Jones
 
 import numpy as np
-from pytest import mark
+
+# from pytest import mark
 from hypothesis import given, strategies as st
 from numpy.testing import assert_array_equal
-from exactdiag.basis import Basis, UP, DN
+from exactdiag.basis import Basis
 from exactdiag import operators
 
 
@@ -28,15 +29,15 @@ def test_project_dn(dn_idx):
     assert_array_equal(indices, result)
 
 
-@mark.parametrize("num_sites", [2, 3, 4, 5])
-@mark.parametrize("sigma", [UP, DN])
-def test_creation_annihilation_adjoint(num_sites, sigma):
-    basis = Basis(num_sites)
-    for n_up, n_dn in basis.iter_fillings():
-        sector = basis.get_sector(n_up, n_dn)
-        sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
-        if sector_p1 is not None:
-            for pos in range(num_sites):
-                cop_dag = operators.CreationOperator(sector, sector_p1, pos, sigma)
-                cop = operators.AnnihilationOperator(sector_p1, sector, pos, sigma)
-                assert_array_equal(cop.toarray(), cop_dag.toarray().T.conj())
+# @mark.parametrize("num_sites", [2, 3, 4, 5])
+# @mark.parametrize("sigma", [UP, DN])
+# def test_creation_annihilation_adjoint(num_sites, sigma):
+#     basis = Basis(num_sites)
+#     for n_up, n_dn in basis.iter_fillings():
+#         sector = basis.get_sector(n_up, n_dn)
+#         sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
+#         if sector_p1 is not None:
+#             for pos in range(num_sites):
+#                 cop_dag = operators.CreationOperator(sector, sector_p1, pos, sigma)
+#                 cop = operators.AnnihilationOperator(sector_p1, sector, pos, sigma)
+#                 assert_array_equal(cop.toarray(), cop_dag.toarray().T.conj())
