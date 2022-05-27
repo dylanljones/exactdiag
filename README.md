@@ -122,6 +122,38 @@ for i, j, val in hubbard_hamiltonian_data(sector):
 hamop = ed.HamiltonOperator(sector.size, data, (rows, cols))
 ````
 
+#### Models
+
+Some methods require a model object to work. Users can define their own
+models or use one of the following included models:
+
+| Module     | Description                                         | Lattice support    |
+|:-----------|:----------------------------------------------------|:-------------------|
+| abc        | Model-Parameter container and abstract base classes | -                  |
+| anderson   | Anderson imurity models                             | :x:                |
+| hubbard    | Hubbard model                                       | :heavy_check_mark: |              |
+
+
+A custom model can be defined by inheriting from the abstract base classes.
+Many-body models, for example, have to implement the `_hamiltonian_data` method,
+which generates the rows, columns and values of the Hamilton operator for each
+basis sector:
+
+````python
+import exactdiag as ed
+
+
+class CustomModel(ed.models.AbstractManyBodyModel):
+
+    def __init__(self, num_sites, eps=0.0, ...):
+        super().__init__(num_sites, eps=eps, ...)
+
+    def _hamiltonian_data(self, up_states, dn_states):
+        yield from ed.project_onsite_energy(up_states, dn_states, self.eps)
+        ...
+````
+
+
 #### Green's function
 
 Using a custom defined model or one of the included models the Green's function can be computed:
@@ -144,14 +176,6 @@ gf = ed.gf_lehmann(model, z, beta, i=2, sigma=ed.UP)[0]
 <p align="center">
   <img src="examples/hubbard_gf.png" alt="Sublime's custom image"/>
 </p>
-
-Included models:
-
-| Module     | Description                                         | Lattice support    |
-|:-----------|:----------------------------------------------------|:-------------------|
-| abc        | Model-Parameter container and abstract base classes | -                  |
-| anderson   | Anderson imurity models                             | :x:                |
-| hubbard    | Hubbard model                                       | :heavy_check_mark: |              |
 
 
 [tests-badge]: https://img.shields.io/github/workflow/status/dylanljones/exactdiag/Test/master?label=test&logo=github&style=flat
