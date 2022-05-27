@@ -6,3 +6,4 @@
 
 from .abc import ModelParameters, AbstractManyBodyModel
 from .hubbard import HubbardModel
+from .anderson import SingleImpurityAndersonModel
