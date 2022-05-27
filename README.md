@@ -1,9 +1,13 @@
 # Exact diagonalization
 
-[![GitHub][license]][license-url]
-[![Code style: black][black]][black-url]
+[![Tests][tests-badge]][tests-url]
+[![License: MIT][license-badge]][license-url]
+[![Code style: black][black-badge]][black-url]
 
-:warning: **WARNING**: This project is still under development and might contain errors or change significantly in the future!
+
+|⚠️|  This project is still under heavy development and might contain bugs or have breaking API changes in the future. |
+|----|:------------------------------------------------------------------------------------------------------------------|
+
 
 ## Installation
 
@@ -117,10 +121,10 @@ for i, j, val in hubbard_hamiltonian_data(sector):
 
 hamop = ed.HamiltonOperator(sector.size, data, (rows, cols))
 ````
-
+[tests-badge]: https://img.shields.io/github/workflow/status/dylanljones/exactdiag/Test/master?label=test&logo=github&style=flat
+[license-badge]: https://img.shields.io/github/license/dylanljones/exactdiag?color=lightgrey&style=flat-square
+[black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square
 
 [license-url]: https://github.com/dylanljones/exactdiag/blob/master/LICENSE
 [black-url]: https://github.com/psf/black
-
-[license]: https://img.shields.io/github/license/dylanljones/exactdiag?color=lightgrey&style=flat-square
-[black]: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square
+[tests-url]: https://github.com/dylanljones/exactidag/actions/workflows/tests.yml
