@@ -1,7 +1,6 @@
 # Exact diagonalization
 
 [![Tests][tests-badge]][tests-url]
-[![License: MIT][license-badge]][license-url]
 [![Code style: black][black-badge]][black-url]
 
 
@@ -9,7 +8,7 @@
 |----|:------------------------------------------------------------------------------------------------------------------|
 
 
-## Installation
+## 🔧 Installation
 
 Install via `pip` from github:
 ```commandline
@@ -21,7 +20,7 @@ or download/clone the package, navigate to the root directory and install via
 pip install .
 ````
 
-## Quick-Start
+## 🚀 Quick-Start
 
 
 #### Basis
