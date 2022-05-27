@@ -121,6 +121,39 @@ for i, j, val in hubbard_hamiltonian_data(sector):
 
 hamop = ed.HamiltonOperator(sector.size, data, (rows, cols))
 ````
+
+#### Green's function
+
+Using a custom defined model or one of the included models the Green's function can be computed:
+````python
+import numpy as np
+import lattpy as lp
+import matplotlib.pyplot as plt
+import exactdiag as ed
+
+num_sites = 5
+u, hop = 4.0, 1.0
+beta = 10.0
+
+latt = lp.finite_hypercubic(num_sites)
+model = ed.models.HubbardModel(latt, inter=u, hop=hop).hf()
+
+z = np.linspace(-10, +10, 1001) + 1e-1j
+gf = ed.gf_lehmann(model, z, beta, i=2, sigma=ed.UP)[0]
+````
+<p align="center">
+  <img src="examples/hubbard_gf.png" alt="Sublime's custom image"/>
+</p>
+
+Included models:
+
+| Module     | Description                                         | Lattice support    |
+|:-----------|:----------------------------------------------------|:-------------------|
+| abc        | Model-Parameter container and abstract base classes | -                  |
+| anderson   | Anderson imurity models                             | :x:                |
+| hubbard    | Hubbard model                                       | :heavy_check_mark: |              |
+
+
 [tests-badge]: https://img.shields.io/github/workflow/status/dylanljones/exactdiag/Test/master?label=test&logo=github&style=flat
 [license-badge]: https://img.shields.io/github/license/dylanljones/exactdiag?color=lightgrey&style=flat-square
 [black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square
