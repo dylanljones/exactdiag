@@ -8,8 +8,9 @@
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided  # noqa
-from scipy import linalg as la
 import scipy.sparse
+from scipy import linalg as la
+import scipy.sparse.linalg as sla
 from typing import NamedTuple
 from functools import partial
 from abc import ABC, abstractmethod
@@ -124,7 +125,13 @@ def matshow(
     ax : plt.Axes, optional
         Axes item
     """
-    mat = np.asarray(mat)
+    if isinstance(mat, sla.LinearOperator):
+        x = np.eye(mat.shape[1], dtype=mat.dtype)
+        mat = mat.matmat(x)
+    elif isinstance(mat, scipy.sparse.spmatrix):
+        mat = mat.toarray()
+    else:
+        mat = np.asarray(mat)
 
     if ax is None:
         fig, ax = plt.subplots()
