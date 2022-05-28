@@ -1,0 +1,4 @@
+[exactdiag]
+
+numba_threads = -1
+cache_dir = ""
