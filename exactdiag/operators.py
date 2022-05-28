@@ -7,6 +7,7 @@
 """This module contains tools for working with linear operators in sparse format."""
 
 import abc
+import hashlib
 import numpy as np
 from numba import njit
 import scipy.sparse.linalg as sla
@@ -642,6 +643,11 @@ class HamiltonOperator(LinearOperator):
         indices = np.where(self.indices[:, 0] == self.indices[:, 1])[0]
         # Return sum of diagonal elements
         return float(np.sum(self.data[indices]))
+
+    def hash(self, algorithm="md5"):
+        data = bytes(self.shape[0]) + bytes(self.indices.data) + bytes(self.data.data)
+        h = hashlib.new(algorithm, data)
+        return h.hexdigest()
 
 
 # -- Creation- and Annihilation-Operators ----------------------------------------------
