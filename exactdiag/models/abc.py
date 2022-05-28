@@ -5,6 +5,7 @@
 # Copyright (c) 2022, Dylan Jones
 
 import json
+import hashlib
 import numpy as np
 from abc import ABC, abstractmethod
 from collections import OrderedDict
@@ -149,6 +150,11 @@ class ModelParameters(MutableMapping):
         greek ASCII charakters.
         """
         return ", ".join([f"{k}={v}" for k, v in self.__params__.items()])
+
+    def hash(self, algorithm="md5"):
+        data = self.tostring().encode()
+        h = hashlib.new(algorithm, data)
+        return h.hexdigest()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self.__dict__())})"
