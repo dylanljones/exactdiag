@@ -67,6 +67,10 @@ class HubbardModel(AbstractManyBodyModel):
     def pformat(self):
         return f"U={self.inter}, ε={self.eps}, t={self.hop}, μ={self.mu}"
 
+    def tostring(self, decimals: int = None, delim: str = "; ") -> str:
+        s = super().tostring(decimals, delim)
+        return str(self.num_sites) + delim + s
+
     def _hamiltonian_data(self, up_states, dn_states):
         inter = self.inter
         eps = self.eps - self.mu

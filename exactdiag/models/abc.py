@@ -152,9 +152,9 @@ class ModelParameters(MutableMapping):
         return ", ".join([f"{k}={v}" for k, v in self.__params__.items()])
 
     def hash(self, algorithm="md5"):
-        data = self.tostring().encode()
-        h = hashlib.new(algorithm, data)
-        return h.hexdigest()
+        s = self.__class__.__name__ + self.tostring()
+        h = hashlib.new(algorithm, s.encode())
+        return "model_" + h.hexdigest()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self.__dict__())})"

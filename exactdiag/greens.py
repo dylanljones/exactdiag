@@ -4,10 +4,10 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
-import os
 import logging
 import numpy as np
-from numba import njit, prange, set_num_threads
+from numba import njit, prange
+from typing import MutableMapping
 from .basis import Sector, UP
 from .models import AbstractManyBodyModel
 from .operators import AnnihilationOperator, CreationOperator
@@ -15,8 +15,6 @@ from .linalg import compute_ground_state
 from ._expm_multiply import expm_multiply
 
 logger = logging.getLogger(__name__)
-
-set_num_threads(os.cpu_count() - 1)
 
 _jitkw = dict(fastmath=True, nogil=True, parallel=True)
 
@@ -66,17 +64,42 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
     return np.einsum(subscript_str, eigvecs_adj, 1 / arg, eigvecs)
 
 
-def solve_sector(model: AbstractManyBodyModel, sector: Sector, cache: dict = None):
-    sector_key = (sector.n_up, sector.n_dn)
-    if cache is not None and sector_key in cache:
+def solve_sector(
+    model: AbstractManyBodyModel, sector: Sector, cache: MutableMapping = None
+):
+    """Solves the eigenvalue problem for a sector of a many-body model.
+
+    Parameters
+    ----------
+    model : AbstractManyBodyModel
+        The N-site many-body model. It is responsible for generating the Hamilton
+        operator.
+    sector : Sector
+        The basis sector to solve.
+    cache : MutableMapping
+        A cache used for storing the eigenvalues and eigenvectors. The hash of the
+        Hamilton operator is used as keys.
+
+    Returns
+    -------
+    eigvals : (N, ) np.ndarray
+        The eigenvalues of the sector.
+    eigenvecs : (N, N) np.ndarray
+        The eigenvectors of the sector.
+    """
+    hamop = model.hamilton_operator(sector=sector)
+    if cache is None:
+        return np.linalg.eigh(hamop.toarray())
+
+    key = hamop.hash()
+    try:
+        eigvals, eigvecs = cache[key]
         logger.debug("Loading eig  %d, %d (%s)", sector.n_up, sector.n_dn, sector.size)
-        eigvals, eigvecs = cache[sector_key]
-    else:
+    except KeyError:
         logger.debug("Solving eig  %d, %d (%s)", sector.n_up, sector.n_dn, sector.size)
-        ham = model.hamiltonian(sector=sector)
-        eigvals, eigvecs = np.linalg.eigh(ham)
-        if cache is not None:
-            cache[sector_key] = [eigvals, eigvecs]
+        eigvals, eigvecs = np.linalg.eigh(hamop.toarray())
+        cache[key] = (eigvals, eigvecs)
+
     return eigvals, eigvecs
 
 
