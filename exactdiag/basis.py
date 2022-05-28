@@ -642,23 +642,26 @@ class Basis:
     def generate_states(self, n: int = None) -> Union[list, np.ndarray]:
         total = self.num_sites
         if n is None:
-            return list(range(2**total))
+            states = list(range(2**total))
         elif n == 0:
-            return [0]
+            states = [0]
         elif n == 1:
-            return list(2**b for b in range(total))
-        bitvals = ["0" for _ in range(total - n)]
-        bitvals += ["1" for _ in range(n)]
-        states = set(int("".join(bits), 2) for bits in permutations(bitvals))
-        return np.asarray(sorted(states))
+            states = list(2**b for b in range(total))
+        else:
+            bitvals = ["0" for _ in range(total - n)]
+            bitvals += ["1" for _ in range(n)]
+            states = sorted(int("".join(bits), 2) for bits in permutations(bitvals))
+
+        return np.asarray(states)
 
     def get_states(self, n: int = None) -> List[int]:
         if n in self.sectors:
             # Get cached spin-sector states
-            states = self.sectors.get(n, list(range(self.num_spinstates)))
+            states = self.sectors[n]
         else:
             # Compute new spin-sector states and store them
             states = self.generate_states(n)
+            print(type(states))
             self.sectors[n] = states
         return states
 
