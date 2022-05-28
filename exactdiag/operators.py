@@ -28,6 +28,9 @@ __all__ = [
     "HamiltonOperator",
 ]
 
+# from numba import i8, f8, types
+_jitkw = dict(fastmath=True, nogil=True)
+
 
 def project_up(up_idx, num_dn_states, dn_indices):
     """Projects a spin-up state onto the full basis(-sector).
@@ -89,7 +92,7 @@ def project_dn(dn_idx, num_dn_states, up_indices):
     return np.atleast_1d(up_indices * num_dn_states + dn_idx)
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def project_elements_up(up_idx, num_dn_states, dn_indices, value, target=None):
     """Projects a value for a spin-up state onto the full basis(-sector).
 
@@ -154,7 +157,7 @@ def project_elements_up(up_idx, num_dn_states, dn_indices, value, target=None):
         yield row, col, value
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def project_elements_dn(dn_idx, num_dn_states, up_indices, value, target=None):
     """Projects a value for a spin-down state onto the full basis(-sector).
 
@@ -222,7 +225,7 @@ def project_elements_dn(dn_idx, num_dn_states, up_indices, value, target=None):
 # -- Helper methods --------------------------------------------------------------------
 
 
-@njit("f8(i8, f8[:])", fastmath=True, nogil=True)
+@njit("float64(int32, float64[:])", **_jitkw)
 def weighted_element(state, values):
     """Computes the value of a specific matrix element of a many-body Hamiltonian.
 
@@ -249,7 +252,7 @@ def weighted_element(state, values):
     return value
 
 
-@njit("i8(i8, i8)", fastmath=True, nogil=True)
+@njit("int32(int32, int32)", **_jitkw)
 def bit_count(number, width):
     """Counts the number of bits with value 1.
 
@@ -272,7 +275,7 @@ def bit_count(number, width):
     return count
 
 
-@njit(fastmath=True, nogil=True)
+@njit("int32(int32[:], int32)", **_jitkw)
 def bisect_left(a, x):
     """Locate the insertion point for x in `a` to maintain a sorted order.
 
@@ -301,7 +304,7 @@ def bisect_left(a, x):
 # -- Hamiltonian projectors ------------------------------------------------------------
 
 
-@njit(fastmath=True, nogil=True)
+@njit("(int32[:], int32[:], float64[:])", **_jitkw)
 def project_hubbard_inter(up_states, dn_states, u):
     """Projects the on-site interaction of a many-body Hamiltonian onto the full basis.
 
@@ -355,7 +358,7 @@ def project_hubbard_inter(up_states, dn_states, u):
                 yield origin, origin, energy
 
 
-@njit(fastmath=True, nogil=True)
+@njit("(int32[:], int32[:], float64[:])", **_jitkw)
 def project_onsite_energy(up_states, dn_states, eps):
     """Projects the on-site energy of a many-body Hamiltonian onto full basis(-sector).
 
@@ -398,7 +401,8 @@ def project_onsite_energy(up_states, dn_states, eps):
     """
     # num_sites = len(eps)
     num_dn = len(dn_states)
-    all_up, all_dn = np.arange(len(up_states)), np.arange(num_dn)
+    all_up = np.arange(len(up_states), dtype=np.int32)
+    all_dn = np.arange(num_dn, dtype=np.int32)
 
     # Spin-up elements
     for up_idx, up in enumerate(up_states):
@@ -421,7 +425,7 @@ def project_onsite_energy(up_states, dn_states, eps):
                 yield origin, origin, energy
 
 
-@njit(fastmath=True, nogil=True)
+@njit("int32(int32, int32, int32, int32)", **_jitkw)
 def _hopping_sign(initial_state, width, site1, site2):
     """Computes the fermionic sign change of a hopping element."""
     mask = 0
@@ -432,7 +436,7 @@ def _hopping_sign(initial_state, width, site1, site2):
     return sign
 
 
-@njit(fastmath=True, nogil=True)
+@njit("(int32[:], int32, int32, int32, float64)", **_jitkw)
 def _compute_hopping_term(states, width, site1, site2, hop):
     assert site1 < site2
 
@@ -459,7 +463,7 @@ def _compute_hopping_term(states, width, site1, site2, hop):
             yield i, j, sign * hop
 
 
-@njit(fastmath=True, nogil=True)
+@njit("(int32[:], int32[:], int32, int32, int32, float64)", **_jitkw)
 def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
     """Projects the hopping between two sites onto full basis.
 
@@ -509,7 +513,8 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
     >>> matshow(ham, ticklabels=sector.state_labels(), values=True)
     """
     num_dn = len(dn_states)
-    all_up, all_dn = np.arange(len(up_states)), np.arange(num_dn)
+    all_up = np.arange(len(up_states), dtype=np.int32)
+    all_dn = np.arange(num_dn, dtype=np.int32)
 
     # Spin-up hopping
     for o, t, a in _compute_hopping_term(up_states, num_sites, site1, site2, hop):
@@ -653,7 +658,7 @@ class HamiltonOperator(LinearOperator):
 # -- Creation- and Annihilation-Operators ----------------------------------------------
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def _apply_creation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
     op = 1 << pos
     all_dn = np.arange(num_dn)
@@ -666,7 +671,7 @@ def _apply_creation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
             matvec[targets] = x[origins]
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def _apply_creation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
     op = 1 << pos
     num_dn = len(dn_states)
@@ -680,7 +685,7 @@ def _apply_creation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
             matvec[targets] = x[origins]
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
     op = 1 << pos
     all_dn = np.arange(num_dn)
@@ -693,7 +698,7 @@ def _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
             matvec[targets] = x[origins]
 
 
-@njit(fastmath=True, nogil=True)
+@njit(**_jitkw)
 def _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
     op = 1 << pos
     num_dn = len(dn_states_p1)
