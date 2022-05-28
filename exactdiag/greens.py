@@ -4,9 +4,10 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
+import os
 import logging
 import numpy as np
-from numba import njit, prange
+from numba import njit, prange, set_num_threads
 from .basis import Sector, UP
 from .models import AbstractManyBodyModel
 from .operators import AnnihilationOperator, CreationOperator
@@ -14,6 +15,8 @@ from .linalg import compute_ground_state
 from ._expm_multiply import expm_multiply
 
 logger = logging.getLogger(__name__)
+
+set_num_threads(os.cpu_count() - 1)
 
 _jitkw = dict(fastmath=True, nogil=True, parallel=True)
 
@@ -127,7 +130,7 @@ def double_occupation(up_states, dn_states, evals, evecs, beta, emin, pos):
     return occ
 
 
-@njit("void(c16[:], c16[:], f8[:], f8[:], f8[:, :], f8[:, :], f8, f8)", **_jitkw)
+@njit("void(c16[:], c16[:], f8[:], f8[:], f8[:,::1], f8[:,::1], f8, f8)", **_jitkw)
 def _acc_gf_diag(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
     overlap = np.abs(evecs_p1.T.conj() @ cdag_evec) ** 2
 
@@ -149,7 +152,10 @@ def _acc_gf_diag(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
             gf += overlap[m, n] * weights / (z_m + eig_n)
 
 
-@njit("void(c16[:],c16[:],f8[:,:],f8[:,:],f8[:],f8[:,:],f8[:],f8[:,:],f8,f8)", **_jitkw)
+@njit(
+    "void(c16[:],c16[:],f8[:,::1],f8[:,::1],f8[:],f8[:,::1],f8[:],f8[:,::1],f8,f8)",
+    **_jitkw,
+)
 def _acc_gf(gf, z, c_evec_m, cdag_evec_n, evals_n, evecs_n, evals_m, evecs_m, beta, e0):
     overlap1 = evecs_n.T.conj() @ c_evec_m  # <n|c_i|m>
     overlap2 = evecs_m.T.conj() @ cdag_evec_n  # <m|c_j^†|n>
