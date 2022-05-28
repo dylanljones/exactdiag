@@ -8,3 +8,4 @@ scipy>=1.7.1
 matplotlib>=3.0.0
 colorcet>=2.0.0
 lattpy>=0.7.2
+h5py
