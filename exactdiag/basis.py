@@ -650,7 +650,7 @@ class Basis:
         else:
             bitvals = ["0" for _ in range(total - n)]
             bitvals += ["1" for _ in range(n)]
-            states = sorted(int("".join(bits), 2) for bits in permutations(bitvals))
+            states = sorted(set(int("".join(b), 2) for b in permutations(bitvals)))
 
         return np.asarray(states)
 
