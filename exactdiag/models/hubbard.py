@@ -23,7 +23,7 @@ class HubbardModel(AbstractManyBodyModel):
     Attributes
     ----------
     inter : float or Sequence, optional
-        The onsite interaction energy of the model. The default value is ``2``.
+        The onsite interaction energy of the model. The default value is ``0``.
     eps : float or Sequence, optional
         The onsite energy of the model. The default value is ``0``.
     eps_bath : float or Sequence, optional
@@ -34,7 +34,7 @@ class HubbardModel(AbstractManyBodyModel):
         The chemical potential. The default is ``0``.
     """
 
-    def __init__(self, *args, inter=0.0, eps=0.0, hop=1.0, mu=0.0):
+    def __init__(self, *args, inter=None, eps=None, hop=None, mu=None):
         """Initializes the ``HubbardModel``."""
         if len(args) == 1:
             # Argument is a lattice instance
@@ -45,8 +45,17 @@ class HubbardModel(AbstractManyBodyModel):
             # Aurgument is the number of sites and the neighbor data
             num_sites, neighbors = args
 
+        inter = inter or 0.0
+        eps = eps or 0.0
+        hop = hop or 1.0
+        mu = mu or 0.0
         super().__init__(num_sites, inter=inter, eps=eps, hop=hop, mu=mu)
         self.neighbors = neighbors
+
+    @classmethod
+    def chain(cls, num_sites, inter=None, eps=None, hop=None, mu=None):
+        neighbors = [[i, i + 1] for i in range(num_sites - 1)]
+        return cls(num_sites, neighbors, inter=inter, eps=eps, hop=hop, mu=mu)
 
     def half_filling(self):
         return self.hf()
