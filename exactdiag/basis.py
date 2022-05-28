@@ -661,7 +661,6 @@ class Basis:
         else:
             # Compute new spin-sector states and store them
             states = self.generate_states(n)
-            print(type(states))
             self.sectors[n] = states
         return states
 
