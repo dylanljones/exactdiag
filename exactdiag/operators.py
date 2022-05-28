@@ -28,7 +28,6 @@ __all__ = [
     "HamiltonOperator",
 ]
 
-# from numba import i8, f8, types
 _jitkw = dict(fastmath=True, nogil=True)
 
 

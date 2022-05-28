@@ -3,6 +3,8 @@
 
 dev_*.py
 .data/*
+__edcache__/
+
 # -- Python gitignore ------------------------------------------------------------------
 
 # setuptools_scm version file
