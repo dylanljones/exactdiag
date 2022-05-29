@@ -4,6 +4,9 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
+import os
+import pickle
+import shutil
 import logging
 import numpy as np
 from numba import njit, prange
@@ -293,8 +296,24 @@ class GreensFunctionMeasurement:
             self._acc_occ(up, dn, evals, evecs, factor)
             self._acc_occ_double(up, dn, evals, evecs, factor)
 
+    def save(self, file):
+        data = [self._part, self._gs_energy, self._gf, self._occ, self._occ_double]
+        with open(file, "wb") as fh:
+            pickle.dump(data, fh)
 
-def gf_lehmann(model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True):
+    def load(self, file):
+        with open(file, "rb") as fh:
+            data = pickle.load(fh)
+        self._part = data[0]
+        self._gs_energy = data[1]
+        self._gf = data[2]
+        self._occ = data[3]
+        self._occ_double = data[4]
+
+
+def gf_lehmann(
+    model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True, cache_dir=""
+):
     if j is None:
         j = i
 
@@ -308,15 +327,24 @@ def gf_lehmann(model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True):
     fillings = list(basis.iter_fillings())
     num = len(fillings)
     w = len(str(num))
+
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
     for it, (n_up, n_dn) in enumerate(fillings):
         sector = model.get_sector(n_up, n_dn)
         logger.info("[%s/%s] Sector %s, %s", f"{it+1:>{w}}", num, n_up, n_dn)
 
         sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
         if sector_p1 is not None:
-            eigvals, eigvecs = solve_sector(model, sector, cache=eig_cache)
-            eigvals_p1, eigvecs_p1 = solve_sector(model, sector_p1, cache=eig_cache)
-            data.accumulate(sector, sector_p1, eigvals, eigvecs, eigvals_p1, eigvecs_p1)
+            file = os.path.join(cache_dir, f"sector_{n_up}_{n_dn}")
+            if os.path.exists(file):
+                data.load(file)
+            else:
+                evals, evecs = solve_sector(model, sector, cache=eig_cache)
+                evals_p1, evecs_p1 = solve_sector(model, sector_p1, cache=eig_cache)
+                data.accumulate(sector, sector_p1, evals, evecs, evals_p1, evecs_p1)
+                data.save(file)
         else:
             logger.debug("No upper sector, skipping")
 
@@ -325,6 +353,48 @@ def gf_lehmann(model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True):
         logger.info("occupation:  %.4f", data.occ)
         logger.info("double-occ:  %.4f", data.occ_double)
     return data.gf, data.occ, data.occ_double
+
+
+def _compute_gf(model, z, beta, i, j, sigma, eig_cache=None, directory=None):
+    if directory is None:
+        return gf_lehmann(model, z, beta, i, j, sigma, eig_cache)[0]
+
+    cache_dir = os.path.join(directory, f"gf_{i}_{j}_{sigma}")
+
+    file = os.path.join(directory, f"gdat_{i}_{j}.npz")
+    if os.path.exists(file):
+        gf = np.loadtxt(file, dtype=np.complex128)
+    else:
+        gf = gf_lehmann(model, z, beta, i, j, sigma, eig_cache, cache_dir=cache_dir)[0]
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        np.savetxt(file, gf)
+
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+
+    return gf
+
+
+def compute_gf_diag(model, z, beta, sigma=UP, eig_cache=None, directory=None):
+    eig_cache = dict() if eig_cache is None else eig_cache
+    data = np.zeros((len(z), model.num_sites), dtype=np.complex128)
+    for i in range(model.num_sites):
+        data[:, i] = _compute_gf(model, z, beta, i, i, sigma, eig_cache, directory)
+    return data
+
+
+def compute_gf_full(model, z, beta, sigma=UP, eig_cache=None, directory=None):
+    eig_cache = dict() if eig_cache is None else eig_cache
+    num = model.num_sites
+    data = np.zeros((len(z), num, num), dtype=np.complex128)
+    for i in range(num):
+        for j in range(i, num):
+            gf = _compute_gf(model, z, beta, i, j, sigma, eig_cache, directory)
+            data[:, i, j] = gf
+            if i < j:
+                data[:, j, i] = gf
+    return data
 
 
 def gf_greater(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
