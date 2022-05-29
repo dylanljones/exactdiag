@@ -652,7 +652,7 @@ class Basis:
             bitvals += ["1" for _ in range(n)]
             states = sorted(set(int("".join(b), 2) for b in permutations(bitvals)))
 
-        return np.asarray(states)
+        return np.asarray(states, dtype=np.int32)
 
     def get_states(self, n: int = None) -> List[int]:
         if n in self.sectors:
