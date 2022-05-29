@@ -197,4 +197,4 @@ gf = ed.gf_lehmann(model, z, beta, i=2, sigma=ed.UP)[0]
 
 [license-url]: https://github.com/dylanljones/exactdiag/blob/master/LICENSE
 [black-url]: https://github.com/psf/black
-[tests-url]: https://github.com/dylanljones/exactidag/actions/workflows/tests.yml
+[tests-url]: https://github.com/dylanljones/exactdiag/actions/workflows/tests.yml
