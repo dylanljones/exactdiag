@@ -312,7 +312,7 @@ class GreensFunctionMeasurement:
 
 
 def gf_lehmann(
-    model, z, beta, i=0, j=None, sigma=UP, eig_cache=None, occ=True, cache_dir=""
+    model, z, i=0, j=None, sigma=UP, eig_cache=None, occ=True, cache_dir=None
 ):
     if j is None:
         j = i
@@ -323,12 +323,12 @@ def gf_lehmann(
     logger.info("Accumulating Lehmann sum (i=%s, j=%s, sigma=%s)", i, j, sigma)
     logger.debug("Sites: %s (%s states)", basis.num_sites, basis.size)
 
-    data = GreensFunctionMeasurement(z, beta, i, j, sigma, measure_occ=occ)
+    data = GreensFunctionMeasurement(z, model.beta, i, j, sigma, measure_occ=occ)
     fillings = list(basis.iter_fillings())
     num = len(fillings)
     w = len(str(num))
 
-    if not os.path.exists(cache_dir):
+    if cache_dir is not None and not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
     for it, (n_up, n_dn) in enumerate(fillings):
@@ -355,17 +355,22 @@ def gf_lehmann(
     return data.gf, data.occ, data.occ_double
 
 
-def _compute_gf(model, z, beta, i, j, sigma, eig_cache=None, directory=None):
+def _compute_gf(model, z, i, j, sigma, eig_cache=None, directory=None):
     if directory is None:
-        return gf_lehmann(model, z, beta, i, j, sigma, eig_cache)[0]
+        return gf_lehmann(model, z, i, j, sigma, eig_cache)[0]
 
-    cache_dir = os.path.join(directory, f"gf_{i}_{j}_{sigma}")
+    model_hash = model.hash()
+    # Cache directory (stores sector GFs)
+    cache_dir = os.path.join(directory, model_hash, f"sector_{i}_{j}_{sigma}")
+    # File path for storing results of G_{ijs}
+    file = os.path.join(directory, model_hash, f"gdat_{i}_{j}_{sigma}")
 
-    file = os.path.join(directory, f"gdat_{i}_{j}.npz")
     if os.path.exists(file):
+        # Load stored data
         gf = np.loadtxt(file, dtype=np.complex128)
     else:
-        gf = gf_lehmann(model, z, beta, i, j, sigma, eig_cache, cache_dir=cache_dir)[0]
+        # Compute data and store result
+        gf = gf_lehmann(model, z, i, j, sigma, eig_cache, cache_dir=cache_dir)[0]
         if not os.path.exists(directory):
             os.makedirs(directory)
         np.savetxt(file, gf)
@@ -376,34 +381,32 @@ def _compute_gf(model, z, beta, i, j, sigma, eig_cache=None, directory=None):
     return gf
 
 
-def compute_gf_diag(model, z, beta, sigma=UP, eig_cache=None, directory=None):
+def compute_gf_diag(model, z, sigma=UP, eig_cache=None, directory=None):
     eig_cache = dict() if eig_cache is None else eig_cache
     data = np.zeros((len(z), model.num_sites), dtype=np.complex128)
     for i in range(model.num_sites):
-        data[:, i] = _compute_gf(model, z, beta, i, i, sigma, eig_cache, directory)
+        data[:, i] = _compute_gf(model, z, i, i, sigma, eig_cache, directory)
     return data
 
 
-def compute_gf_full(model, z, beta, sigma=UP, eig_cache=None, directory=None):
+def compute_gf_full(model, z, sigma=UP, eig_cache=None, directory=None):
     eig_cache = dict() if eig_cache is None else eig_cache
     num = model.num_sites
     data = np.zeros((len(z), num, num), dtype=np.complex128)
     for i in range(num):
         for j in range(i, num):
-            gf = _compute_gf(model, z, beta, i, j, sigma, eig_cache, directory)
+            gf = _compute_gf(model, z, i, j, sigma, eig_cache, directory)
             data[:, i, j] = gf
             if i < j:
                 data[:, j, i] = gf
     return data
 
 
-def gf_greater(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
+def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     """Computes the greater real time Green's function :math:`G^{>}_{iσ}(t)`.
 
     Parameters
     ----------
-    basis : Basis
-        The many body state basis of the model.
     model : Model
         The model instance responsible for generating the Hamiltonian matrix.
     gs : EigenState
@@ -426,6 +429,7 @@ def gf_greater(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
     gf_t : (N, ) np.ndarray
         The greater Green's function evaluated at the times.
     """
+    basis = model.basis
     n_up, n_dn = gs.n_up, gs.n_dn
     sector = basis.get_sector(n_up, n_dn)
     times, dt = np.linspace(start, stop, num, retstep=True)
@@ -449,13 +453,11 @@ def gf_greater(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
     return times, overlaps
 
 
-def gf_lesser(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
+def gf_lesser(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     """Computes the lesser real time Green's function :math:`G^{<}_{iσ}(t)`.
 
     Parameters
     ----------
-    basis : Basis
-        The many body state basis of the model.
     model : Model
         The model instance responsible for generating the Hamiltonian matrix.
     gs : EigenState
@@ -478,6 +480,7 @@ def gf_lesser(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
     gf_t : (N, ) np.ndarray
         The lesser Green's function evaluated at the times.
     """
+    basis = model.basis
     n_up, n_dn = gs.n_up, gs.n_dn
     sector = basis.get_sector(n_up, n_dn)
 
@@ -502,7 +505,7 @@ def gf_lesser(basis, model, gs, start, stop, num=1000, pos=0, sigma=UP):
     return times, overlaps
 
 
-def gf_tevo(basis, model, start, stop, num=1000, pos=0, sigma=UP):
+def gf_tevo(model, start, stop, num=1000, pos=0, sigma=UP):
     """Computes the real time retarded Green's function :math:`G^{R}_{iσ}(t)`.
 
     The retarded Green's function is the difference of the greater and lesser GF:
@@ -511,8 +514,6 @@ def gf_tevo(basis, model, start, stop, num=1000, pos=0, sigma=UP):
 
     Parameters
     ----------
-    basis : Basis
-        The many body state basis of the model.
     model : Model
         The model instance responsible for generating the Hamiltonian matrix.
     start : float
@@ -533,7 +534,7 @@ def gf_tevo(basis, model, start, stop, num=1000, pos=0, sigma=UP):
     gf_t : (N, ) np.ndarray
         The retarded Green's function evaluated at the times.
     """
-    gs = compute_ground_state(basis, model)
-    times, gf_g = gf_greater(basis, model, gs, start, stop, num, pos, sigma)
-    times, gf_l = gf_lesser(basis, model, gs, start, stop, num, pos, sigma)
+    gs = compute_ground_state(model.basis, model)
+    times, gf_g = gf_greater(model, gs, start, stop, num, pos, sigma)
+    times, gf_l = gf_lesser(model, gs, start, stop, num, pos, sigma)
     return times, gf_g - gf_l

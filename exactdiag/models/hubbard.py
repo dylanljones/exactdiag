@@ -34,7 +34,7 @@ class HubbardModel(AbstractManyBodyModel):
         The chemical potential. The default is ``0``.
     """
 
-    def __init__(self, *args, inter=None, eps=None, hop=None, mu=None):
+    def __init__(self, *args, inter=None, eps=None, hop=None, mu=None, beta=1.0):
         """Initializes the ``HubbardModel``."""
         if len(args) == 1:
             # Argument is a lattice instance
@@ -49,7 +49,7 @@ class HubbardModel(AbstractManyBodyModel):
         eps = eps or 0.0
         hop = hop or 1.0
         mu = mu or 0.0
-        super().__init__(num_sites, inter=inter, eps=eps, hop=hop, mu=mu)
+        super().__init__(num_sites, inter=inter, eps=eps, hop=hop, mu=mu, beta=beta)
         self.neighbors = neighbors
 
     @classmethod
