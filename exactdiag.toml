@@ -2,3 +2,4 @@
 
 numba_threads = -1
 cache_dir = ""
+cache_size = "10 GB"
