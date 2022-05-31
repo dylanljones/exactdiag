@@ -441,7 +441,7 @@ def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     top_ket = cop_dag.matvec(gs.state)  # T|gs>
     bra_top = top_ket.conj()  # <gs|T
 
-    hamop = -1j * model.hamilton_operator(sector_p1)
+    hamop = -1j * model.hamilton_operator(sector=sector_p1)
     top_e0 = np.exp(+1j * gs.energy * dt)
     overlaps = expm_multiply(hamop, top_ket, start=start, stop=stop, num=num) @ bra_top
 
@@ -493,7 +493,7 @@ def gf_lesser(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     top_ket = cop.matvec(gs.state)  # T|gs>
     bra_top = top_ket.conj()  # <gs|T
 
-    hamop = +1j * model.hamilton_operator(sector_m1)
+    hamop = +1j * model.hamilton_operator(sector=sector_m1)
     top_e0 = np.exp(-1j * gs.energy * dt)
     overlaps = expm_multiply(hamop, top_ket, start=start, stop=stop, num=num) @ bra_top
 

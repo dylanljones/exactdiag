@@ -39,10 +39,10 @@ def compute_ground_state(basis, model, thresh=20):
     """
     gs = EigenState()
     for sector in basis.iter_sectors():
-        sham = model.shamiltonian(sector)
+        sham = model.hamilton_operator(sector=sector)
         if sham.shape[0] == 1:
             # 1x1 matrix: eigenvalue problem trivial
-            energy = sham[0, 0]
+            energy = sham.toarray()[0, 0]
             state = np.array([1])
         elif 1 < sham.shape[0] <= thresh:
             # small matrix: solve full eigenvalue problem.
