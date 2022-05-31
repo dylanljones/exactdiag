@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
-from .utils import logger
+from .utils import logger, CONFIG
 
 from .basis import (
     UP,
@@ -52,6 +52,7 @@ from .operators import (
     HamiltonOperator,
 )
 from exactdiag.models.abc import ModelParameters, AbstractManyBodyModel
+from .cache import AbstractCache, EigenCache, EigenCacheHDF5
 from .greens import gf0_pole, gf_lehmann, gf_greater, gf_lesser, gf_tevo
 
 try:
