@@ -19,7 +19,7 @@ from ._expm_multiply import expm_multiply
 
 logger = logging.getLogger(__name__)
 
-_jitkw = dict(fastmath=True, nogil=True, parallel=True)
+_jitkw = dict(fastmath=True, nogil=True, parallel=True, cache=True)
 
 
 def gf0_pole(*args, z, mode="diag") -> np.ndarray:
@@ -337,14 +337,19 @@ def gf_lehmann(
 
         sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
         if sector_p1 is not None:
-            file = os.path.join(cache_dir, f"sector_{n_up}_{n_dn}")
+            if cache_dir is not None:
+                file = os.path.join(cache_dir, f"sector_{n_up}_{n_dn}")
+            else:
+                file = ""
+
             if os.path.exists(file):
                 data.load(file)
             else:
                 evals, evecs = solve_sector(model, sector, cache=eig_cache)
                 evals_p1, evecs_p1 = solve_sector(model, sector_p1, cache=eig_cache)
                 data.accumulate(sector, sector_p1, evals, evecs, evals_p1, evecs_p1)
-                data.save(file)
+                if file:
+                    data.save(file)
         else:
             logger.debug("No upper sector, skipping")
 

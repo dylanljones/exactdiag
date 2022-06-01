@@ -224,7 +224,7 @@ def project_elements_dn(dn_idx, num_dn_states, up_indices, value, target=None):
 # -- Helper methods --------------------------------------------------------------------
 
 
-@njit("float64(int32, float64[:])", **_jitkw)
+@njit("float64(int32, float64[:])", cache=True, **_jitkw)
 def weighted_element(state, values):
     """Computes the value of a specific matrix element of a many-body Hamiltonian.
 
@@ -251,7 +251,7 @@ def weighted_element(state, values):
     return value
 
 
-@njit("int32(int32, int32)", **_jitkw)
+@njit("int32(int32, int32)", cache=True, **_jitkw)
 def bit_count(number, width):
     """Counts the number of bits with value 1.
 
@@ -274,7 +274,7 @@ def bit_count(number, width):
     return count
 
 
-@njit("int32(int32[:], int32)", **_jitkw)
+@njit("int32(int32[:], int32)", cache=True, **_jitkw)
 def bisect_left(a, x):
     """Locate the insertion point for x in `a` to maintain a sorted order.
 
@@ -424,7 +424,7 @@ def project_onsite_energy(up_states, dn_states, eps):
                 yield origin, origin, energy
 
 
-@njit("int32(int32, int32, int32, int32)", **_jitkw)
+@njit("int32(int32, int32, int32, int32)", cache=True, **_jitkw)
 def _hopping_sign(initial_state, width, site1, site2):
     """Computes the fermionic sign change of a hopping element."""
     mask = 0
