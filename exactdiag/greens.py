@@ -17,6 +17,7 @@ from .operators import AnnihilationOperator, CreationOperator
 from .linalg import compute_ground_state
 from ._expm_multiply import expm_multiply
 
+# from scipy.sparse.linalg import expm_multiply
 logger = logging.getLogger(__name__)
 
 _jitkw = dict(fastmath=True, nogil=True, parallel=True, cache=True)
@@ -437,8 +438,9 @@ def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     basis = model.basis
     n_up, n_dn = gs.n_up, gs.n_dn
     sector = basis.get_sector(n_up, n_dn)
-    times, dt = np.linspace(start, stop, num, retstep=True)
     sector_p1 = basis.upper_sector(n_up, n_dn, sigma)
+
+    times, dt = np.linspace(start, stop, num, retstep=True)
     if sector_p1 is None:
         return times, np.zeros_like(times)
 
@@ -448,7 +450,12 @@ def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):
 
     hamop = -1j * model.hamilton_operator(sector=sector_p1)
     top_e0 = np.exp(+1j * gs.energy * dt)
-    overlaps = expm_multiply(hamop, top_ket, start=start, stop=stop, num=num) @ bra_top
+    overlaps = (
+        expm_multiply(
+            hamop, top_ket, traceA=hamop.trace(), start=start, stop=stop, num=num
+        )
+        @ bra_top
+    )
 
     factor = -1j * np.exp(+1j * gs.energy * times[0])
     overlaps[0] *= factor
@@ -488,9 +495,9 @@ def gf_lesser(model, gs, start, stop, num=1000, pos=0, sigma=UP):
     basis = model.basis
     n_up, n_dn = gs.n_up, gs.n_dn
     sector = basis.get_sector(n_up, n_dn)
+    sector_m1 = basis.lower_sector(n_up, n_dn, sigma)
 
     times, dt = np.linspace(start, stop, num, retstep=True)
-    sector_m1 = basis.lower_sector(n_up, n_dn, sigma)
     if sector_m1 is None:
         return times, np.zeros_like(times)
 
@@ -500,7 +507,12 @@ def gf_lesser(model, gs, start, stop, num=1000, pos=0, sigma=UP):
 
     hamop = +1j * model.hamilton_operator(sector=sector_m1)
     top_e0 = np.exp(-1j * gs.energy * dt)
-    overlaps = expm_multiply(hamop, top_ket, start=start, stop=stop, num=num) @ bra_top
+    overlaps = (
+        expm_multiply(
+            hamop, top_ket, start=start, stop=stop, num=num, traceA=hamop.trace()
+        )
+        @ bra_top
+    )
 
     factor = +1j * np.exp(-1j * gs.energy * times[0])
     overlaps[0] *= factor
