@@ -45,17 +45,17 @@ class HubbardModel(AbstractManyBodyModel):
             # Aurgument is the number of sites and the neighbor data
             num_sites, neighbors = args
 
-        inter = inter or 0.0
-        eps = eps or 0.0
-        hop = hop or 1.0
-        mu = mu or 0.0
+        inter = inter if inter is not None else 0.0
+        eps = eps if eps is not None else 0.0
+        hop = hop if hop is not None else 1.0
+        mu = mu if mu is not None else 0.0
         super().__init__(num_sites, inter=inter, eps=eps, hop=hop, mu=mu, beta=beta)
         self.neighbors = neighbors
 
     @classmethod
-    def chain(cls, num_sites, inter=None, eps=None, hop=None, mu=None):
+    def chain(cls, num_sites, **kwargs):
         neighbors = [[i, i + 1] for i in range(num_sites - 1)]
-        return cls(num_sites, neighbors, inter=inter, eps=eps, hop=hop, mu=mu)
+        return cls(num_sites, neighbors, **kwargs)
 
     def half_filling(self):
         return self.hf()
