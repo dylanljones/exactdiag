@@ -785,9 +785,9 @@ class AnnihilationOperator(LinearOperator):
 
     def _build_dn(self, matvec, x):
         num_up = self.sector.num_up
-        dn_states_m1 = self.sector_m1.dn_states
-        dn_states = self.sector.dn_states
-        _apply_annihilation_dn(matvec, x, num_up, dn_states_m1, dn_states, self.pos)
+        dn_states = self.sector_m1.dn_states
+        dn_states_p1 = self.sector.dn_states
+        _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, self.pos)
 
     def _matvec(self, x):
         matvec = np.zeros((self.shape[0], *x.shape[1:]), dtype=x.dtype)
