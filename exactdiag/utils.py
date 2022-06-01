@@ -50,7 +50,7 @@ def parse_memory(size: str):
         val = match.group()
         prefix = val[:-1].lower()
         i = unit_prefix.index(prefix)
-        factor = div ** i
+        factor = div**i
     else:
         factor = 1
     num = int(re.search(r"\d+|$", size).group())
@@ -75,7 +75,6 @@ def parse_config():
         "numba_threads": num_threads,
         "cache_dir": cache_dir,
         "cache_size": cache_size,
-
     }
 
 
