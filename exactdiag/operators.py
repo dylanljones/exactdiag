@@ -400,7 +400,7 @@ def project_onsite_energy(up_states, dn_states, eps):
     """
     # num_sites = len(eps)
     num_dn = len(dn_states)
-    all_up = np.arange(len(up_states), dtype=np.int32)
+    all_up = np.arange(len(up_states), dtype=np.int32) * num_dn
     all_dn = np.arange(num_dn, dtype=np.int32)
 
     # Spin-up elements
@@ -419,7 +419,7 @@ def project_onsite_energy(up_states, dn_states, eps):
         # energy = np.sum(eps * weights)
         energy = weighted_element(dn, eps)
         if energy:
-            origins = all_up * num_dn + dn_idx
+            origins = all_up + dn_idx
             for origin in origins:
                 yield origin, origin, energy
 
@@ -512,7 +512,7 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
     >>> matshow(ham, ticklabels=sector.state_labels(), values=True)
     """
     num_dn = len(dn_states)
-    all_up = np.arange(len(up_states), dtype=np.int32)
+    all_up = np.arange(len(up_states), dtype=np.int32) * num_dn
     all_dn = np.arange(num_dn, dtype=np.int32)
 
     # Spin-up hopping
@@ -524,8 +524,8 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
 
     # Spin-down hopping
     for o, t, a in _compute_hopping_term(dn_states, num_sites, site1, site2, hop):
-        origins = all_up * num_dn + o
-        targets = all_up * num_dn + t
+        origins = all_up + o
+        targets = all_up + t
         for i, j in zip(origins, targets):
             yield i, j, a
 
@@ -674,13 +674,14 @@ def _apply_creation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
 def _apply_creation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
     op = 1 << pos
     num_dn = len(dn_states)
-    all_up = np.arange(num_up)
+    all_up = np.arange(num_up) * num_dn
+    all_up_p1 = np.arange(num_up) * len(dn_states_p1)
     for dn_idx, dn in enumerate(dn_states):
         if not (dn & op):
             new = dn ^ op
             idx_new = bisect_left(dn_states_p1, new)
-            origins = all_up * num_dn + dn_idx
-            targets = all_up * num_dn + idx_new
+            origins = all_up + dn_idx
+            targets = all_up_p1 + idx_new
             matvec[targets] = x[origins]
 
 
@@ -701,13 +702,14 @@ def _apply_annihilation_up(matvec, x, num_dn, up_states, up_states_p1, pos):
 def _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, pos):
     op = 1 << pos
     num_dn = len(dn_states_p1)
-    all_up = np.arange(num_up)
+    all_up = np.arange(num_up) * num_dn
+    all_up_p1 = np.arange(num_up) * len(dn_states)
     for dn_idx, dn in enumerate(dn_states_p1):
         if dn & op:
             new = dn ^ op
             idx_new = bisect_left(dn_states, new)
-            origins = all_up * num_dn + dn_idx
-            targets = all_up * num_dn + idx_new
+            origins = all_up + dn_idx
+            targets = all_up_p1 + idx_new
             matvec[targets] = x[origins]
 
 
@@ -721,7 +723,7 @@ class CreationOperator(LinearOperator):
         else:
             dim_target = sector_p1.num_dn * sector.num_up
 
-        super().__init__(shape=(dim_target, dim_origin), dtype=np.complex64)
+        super().__init__(shape=(dim_target, dim_origin), dtype=np.float64)
         self.pos = pos
         self.sigma = sigma
         self.sector = sector
@@ -765,7 +767,7 @@ class AnnihilationOperator(LinearOperator):
         else:
             dim_target = sector_m1.num_dn * sector.num_up
 
-        super().__init__(shape=(dim_target, dim_origin), dtype=np.complex64)
+        super().__init__(shape=(dim_target, dim_origin), dtype=np.float64)
         self.pos = pos
         self.sigma = sigma
         self.sector = sector
@@ -783,9 +785,9 @@ class AnnihilationOperator(LinearOperator):
 
     def _build_dn(self, matvec, x):
         num_up = self.sector.num_up
-        dn_states = self.sector_m1.dn_states
-        dn_states_p1 = self.sector.dn_states
-        _apply_annihilation_dn(matvec, x, num_up, dn_states, dn_states_p1, self.pos)
+        dn_states_m1 = self.sector_m1.dn_states
+        dn_states = self.sector.dn_states
+        _apply_annihilation_dn(matvec, x, num_up, dn_states_m1, dn_states, self.pos)
 
     def _matvec(self, x):
         matvec = np.zeros((self.shape[0], *x.shape[1:]), dtype=x.dtype)
