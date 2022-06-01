@@ -164,8 +164,8 @@ def matshow(
         fig.colorbar(im, ax=ax)
 
     if max(mat.shape) < 20:
-        ax.set_xticks(np.arange(0, mat.shape[0], 1))
-        ax.set_yticks(np.arange(0, mat.shape[1], 1))
+        ax.set_xticks(np.arange(0, mat.shape[1], 1))
+        ax.set_yticks(np.arange(0, mat.shape[0], 1))
         if ticklabels is not None:
             xticklabels = yticklabels = ticklabels
         if xticklabels is not None:
