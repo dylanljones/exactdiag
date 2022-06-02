@@ -5,7 +5,6 @@
 # Copyright (c) 2022, Dylan Jones
 
 import numpy as np
-
 from pytest import mark
 from hypothesis import given, strategies as st
 from numpy.testing import assert_array_equal
@@ -29,6 +28,25 @@ def test_project_dn(dn_idx):
     assert_array_equal(indices, result)
 
 
+@mark.parametrize("num", list(range(2**8 - 1)))
+def test_count_bits(num):
+    num = int(num)
+    expected = bin(num).count("1")
+    assert operators.bit_count(num, 8) == expected
+
+
+@mark.parametrize("num", list(range(2**8 - 1)))
+def test_count_bits_between(num):
+    num = int(num)
+    for start in range(6):
+        for stop in range(start, 6):
+            mask = 0
+            for i in range(start, stop):
+                mask += 1 << i
+            expected = bin(num & mask).count("1")
+            assert operators.bit_count_between(num, start, stop) == expected
+
+
 def _build_creation_naive(sector, sector_p1, pos, sigma):
     arr = np.zeros((sector_p1.size, sector.size))
     op = 1 << pos
@@ -43,7 +61,13 @@ def _build_creation_naive(sector, sector_p1, pos, sigma):
 
             if not (numi_s & op):
                 if (numi_s ^ op) == numj_s and (numi_stilde == numj_stilde):
-                    arr[j, i] = 1
+                    # Count bits set between 0 and pos-1 for both spin states
+                    count_s = ed.operators.bit_count_between(numi_s, 0, pos)
+                    count_stilde = ed.operators.bit_count_between(numi_stilde, 0, pos)
+                    # Count is sum of both spin states
+                    count = count_s + count_stilde
+                    sign = (-1) ** count
+                    arr[j, i] = sign
     return arr
 
 
