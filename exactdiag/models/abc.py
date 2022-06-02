@@ -205,6 +205,26 @@ class AbstractManyBodyModel(ModelParameters, ABC):
     def get_sector(self, n_up=None, n_dn=None):
         return self.basis.get_sector(n_up, n_dn)
 
+    def upper_sector(self, n_up, n_dn, sigma):
+        return self.basis.upper_sector(n_up, n_dn, sigma)
+
+    def lower_sector(self, n_up, n_dn, sigma):
+        return self.basis.lower_sector(n_up, n_dn, sigma)
+
+    def iter_upper_sectors(self, sigma):
+        """Iterates over all basis sectors which have an upper sector."""
+        for sector in self.basis.iter_sectors():
+            sector_p1 = self.basis.upper_sector(sector.n_up, sector.n_dn, sigma)
+            if sector_p1:
+                yield sector, sector_p1
+
+    def iter_lower_sectors(self, sigma):
+        """Iterates over all basis sectors which have an lower sector."""
+        for sector in self.basis.iter_sectors():
+            sector_m1 = self.basis.lower_sector(sector.n_up, sector.n_dn, sigma)
+            if sector_m1:
+                yield sector, sector_m1
+
     @abstractmethod
     def _hamiltonian_data(self, up_states, dn_states):
         pass
