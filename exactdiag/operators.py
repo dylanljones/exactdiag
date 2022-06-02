@@ -433,19 +433,8 @@ def project_onsite_energy(up_states, dn_states, eps):
                 yield origin, origin, energy
 
 
-@njit("int32(int32, int32, int32, int32)", cache=True, **_jitkw)
-def _hopping_sign(initial_state, width, site1, site2):
-    """Computes the fermionic sign change of a hopping element."""
-    mask = 0
-    for i in range(site1 + 1, site2):
-        mask += 1 << i
-    jump_overs = bit_count(initial_state & mask, width)
-    sign = (-1) ** jump_overs
-    return sign
-
-
-@njit("(int32[:], int32[:], int32, int32, int32, float64)", **_jitkw)
-def _compute_hopping_term(states, states_other, width, site1, site2, hop):
+@njit("(int32[:], int32, int32, float64)", **_jitkw)
+def _compute_hopping_term(states, site1, site2, hop):
     assert site1 < site2
 
     for i, ini in enumerate(states):
@@ -460,13 +449,13 @@ def _compute_hopping_term(states, states_other, width, site1, site2, hop):
         # ToDo: Account for hop-overs of other spin flavour
         if occ1 and not occ2:
             # Hopping from `site1` to `site2` possible
-            sign = _hopping_sign(ini, width, site1, site2)
+            sign = (-1) ** bit_count_between(ini, site1 + 1, site2)
             j = bisect_left(states, new)
             yield i, j, sign * hop
 
         elif occ2 and not occ1:
             # Hopping from `site2` to `site1` possible
-            sign = _hopping_sign(ini, width, site1, site2)
+            sign = (-1) ** bit_count_between(ini, site1 + 1, site2)
             j = bisect_left(states, new)
             yield i, j, sign * hop
 
@@ -525,18 +514,14 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
     all_dn = np.arange(num_dn, dtype=np.int32)
 
     # Spin-up hopping
-    for o, t, a in _compute_hopping_term(
-        up_states, dn_states, num_sites, site1, site2, hop
-    ):
+    for o, t, a in _compute_hopping_term(up_states, site1, site2, hop):
         origins = o * num_dn + all_dn
         targets = t * num_dn + all_dn
         for i, j in zip(origins, targets):
             yield i, j, a
 
     # Spin-down hopping
-    for o, t, a in _compute_hopping_term(
-        dn_states, dn_states, num_sites, site1, site2, hop
-    ):
+    for o, t, a in _compute_hopping_term(dn_states, site1, site2, hop):
         origins = all_up + o
         targets = all_up + t
         for i, j in zip(origins, targets):
