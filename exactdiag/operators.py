@@ -692,6 +692,7 @@ def _apply_creation_dn(matvec, x, num_sites, up_states, dn_states, dn_states_p1,
     all_up = np.arange(num_up) * num_dn
     all_up_p1 = np.arange(num_up) * len(dn_states_p1)
 
+    x_is_vec = len(x.shape) == 1
     counts = np.zeros((num_up, 1))
     for i, up in enumerate(up_states):
         counts[i] = bit_count(up, num_sites)
@@ -703,7 +704,10 @@ def _apply_creation_dn(matvec, x, num_sites, up_states, dn_states, dn_states_p1,
             origins = all_up + dn_idx
             targets = all_up_p1 + idx_new
             signs = (-1) ** (counts + bit_count_between(dn, 0, pos))
-            matvec[targets] = signs * x[origins]
+            if x_is_vec:
+                matvec[targets] = signs[:, 0] * x[origins]
+            else:
+                matvec[targets] = signs * x[origins]
 
 
 @njit(**_jitkw)
@@ -732,6 +736,7 @@ def _apply_annihilation_dn(
     all_up = np.arange(num_up) * num_dn
     all_up_p1 = np.arange(num_up) * len(dn_states)
 
+    x_is_vec = len(x.shape) == 1
     counts = np.zeros((num_up, 1))
     for i, up in enumerate(up_states_p1):
         counts[i] = bit_count(up, num_sites)
@@ -743,7 +748,10 @@ def _apply_annihilation_dn(
             origins = all_up + dn_idx
             targets = all_up_p1 + idx_new
             signs = (-1) ** (counts + bit_count_between(dn, 0, pos))
-            matvec[targets] = signs * x[origins]
+            if x_is_vec:
+                matvec[targets] = signs[:, 0] * x[origins]
+            else:
+                matvec[targets] = signs * x[origins]
 
 
 class CreationOperator(LinearOperator):
