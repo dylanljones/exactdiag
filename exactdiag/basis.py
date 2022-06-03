@@ -42,7 +42,7 @@ __all__ = [
 
 _BITORDER = +1  # endianess of binary strings (index 0 is on the rhs)
 _ARRORDER = -1  # endianess of binary arrays (index 0 is on the lhs)
-_LABELORDERER = +1  # endianess of state labels (index 0 is on the rhs)
+_LABELORDER = +1  # endianess of state labels (index 0 is on the lhs)
 
 UP, DN = 1, 2  # constants for up/down
 
@@ -86,7 +86,7 @@ def state_label(up_num: int, dn_num: int, digits: int = None) -> str:
             char = EMPTY_CHAR
         chars.append(char)
         # chars.append(SPIN_CHARS[u + (d << 1)])
-    label = "".join(chars[::_LABELORDERER])
+    label = "".join(chars[::_LABELORDER])
     return label
 
 
