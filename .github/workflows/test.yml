@@ -18,7 +18,7 @@ jobs:
           paths_ignore: '[
           "docs/**",
           ".github/**",
-          "examples/**"
+          "examples/**",
           "README.md",
           "CHANGELOG.md",
           "CONTRIBUTING.md",
