@@ -173,7 +173,6 @@ ed.matshow(ham, ticklabels=sector.state_labels(), values=True)
 Using a custom defined model or one of the included models the Green's function can be computed:
 ````python
 import numpy as np
-import lattpy as lp
 import exactdiag as ed
 
 model = ed.models.HubbardModel.chain(num_sites=7, inter=4.0, beta=10.0).hf()
