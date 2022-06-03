@@ -47,27 +47,28 @@ def test_count_bits_between(num):
             assert operators.bit_count_between(num, start, stop) == expected
 
 
+def op_sign(up, dn, i, sigma, num_sites):
+    if sigma == ed.UP:
+        count = ed.operators.bit_count_between(up, 0, i)
+    else:
+        count = ed.operators.bit_count_between(up, 0, num_sites)
+        count += ed.operators.bit_count_between(dn, 0, i)
+    return (-1) ** count
+
+
 def _build_creation_naive(sector, sector_p1, pos, sigma):
     arr = np.zeros((sector_p1.size, sector.size))
     op = 1 << pos
     for i, state_i in enumerate(sector.states):
         for j, state_j in enumerate(sector_p1.states):
-            if sigma == ed.UP:
-                numi_s, numj_s = state_i.up, state_j.up
-                numi_stilde, numj_stilde = state_i.dn, state_j.dn
-            else:
-                numi_s, numj_s = state_i.dn, state_j.dn
-                numi_stilde, numj_stilde = state_i.up, state_j.up
-
-            if not (numi_s & op):
-                if (numi_s ^ op) == numj_s and (numi_stilde == numj_stilde):
-                    # Count bits set between 0 and pos-1 for both spin states
-                    count_s = ed.operators.bit_count_between(numi_s, 0, pos)
-                    count_stilde = ed.operators.bit_count_between(numi_stilde, 0, pos)
-                    # Count is sum of both spin states
-                    count = count_s + count_stilde
-                    sign = (-1) ** count
-                    arr[j, i] = sign
+            up_i, up_j = state_i.up, state_j.up
+            dn_i, dn_j = state_i.dn, state_j.dn
+            if sigma == ed.UP and not (up_i & op):
+                if (up_i ^ op) == up_j and (dn_i == dn_j):
+                    arr[j, i] = op_sign(up_i, dn_i, pos, ed.UP, sector.num_sites)
+            elif sigma == ed.DN and not (dn_i & op):
+                if (dn_i ^ op) == dn_j and (up_i == up_j):
+                    arr[j, i] = op_sign(up_i, dn_i, pos, ed.DN, sector.num_sites)
     return arr
 
 

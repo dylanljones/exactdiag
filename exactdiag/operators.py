@@ -670,9 +670,9 @@ def _apply_creation_up(matvec, x, up_states, dn_states, up_states_p1, pos):
     num_dn = len(dn_states)
     all_dn = np.arange(num_dn)
 
-    counts = np.zeros((num_dn, 1))
-    for i, dn in enumerate(dn_states):
-        counts[i] = bit_count_between(dn, 0, pos)
+    # counts = np.zeros((num_dn, 1))
+    # for i, dn in enumerate(dn_states):
+    #     counts[i] = bit_count_between(dn, 0, pos)
 
     for up_idx, up in enumerate(up_states):
         if not (up & op):
@@ -680,12 +680,12 @@ def _apply_creation_up(matvec, x, up_states, dn_states, up_states_p1, pos):
             idx_new = bisect_left(up_states_p1, new)
             origins = up_idx * num_dn + all_dn
             targets = idx_new * num_dn + all_dn
-            signs = (-1) ** (counts + bit_count_between(up, 0, pos))
+            signs = (-1) ** bit_count_between(up, 0, pos)
             matvec[targets] = signs * x[origins]
 
 
 @njit(**_jitkw)
-def _apply_creation_dn(matvec, x, up_states, dn_states, dn_states_p1, pos):
+def _apply_creation_dn(matvec, x, num_sites, up_states, dn_states, dn_states_p1, pos):
     op = 1 << pos
     num_dn = len(dn_states)
     num_up = len(up_states)
@@ -694,7 +694,7 @@ def _apply_creation_dn(matvec, x, up_states, dn_states, dn_states_p1, pos):
 
     counts = np.zeros((num_up, 1))
     for i, up in enumerate(up_states):
-        counts[i] = bit_count_between(up, 0, pos)
+        counts[i] = bit_count(up, num_sites)
 
     for dn_idx, dn in enumerate(dn_states):
         if not (dn & op):
@@ -707,14 +707,10 @@ def _apply_creation_dn(matvec, x, up_states, dn_states, dn_states_p1, pos):
 
 
 @njit(**_jitkw)
-def _apply_annihilation_up(matvec, x, up_states, dn_states, up_states_p1, pos):
+def _apply_annihilation_up(matvec, x, up_states, dn_states_p1, up_states_p1, pos):
     op = 1 << pos
-    num_dn = len(dn_states)
+    num_dn = len(dn_states_p1)
     all_dn = np.arange(num_dn)
-
-    counts = np.zeros((num_dn, 1))
-    for i, dn in enumerate(dn_states):
-        counts[i] = bit_count_between(dn, 0, pos)
 
     for up_idx, up in enumerate(up_states_p1):
         if up & op:
@@ -722,21 +718,23 @@ def _apply_annihilation_up(matvec, x, up_states, dn_states, up_states_p1, pos):
             idx_new = bisect_left(up_states, new)
             origins = up_idx * num_dn + all_dn
             targets = idx_new * num_dn + all_dn
-            signs = (-1) ** (counts + bit_count_between(up, 0, pos))
+            signs = (-1) ** bit_count_between(up, 0, pos)
             matvec[targets] = signs * x[origins]
 
 
 @njit(**_jitkw)
-def _apply_annihilation_dn(matvec, x, up_states, dn_states, dn_states_p1, pos):
+def _apply_annihilation_dn(
+    matvec, x, num_sites, up_states_p1, dn_states, dn_states_p1, pos
+):
     op = 1 << pos
-    num_up = len(up_states)
+    num_up = len(up_states_p1)
     num_dn = len(dn_states_p1)
     all_up = np.arange(num_up) * num_dn
     all_up_p1 = np.arange(num_up) * len(dn_states)
 
     counts = np.zeros((num_up, 1))
-    for i, up in enumerate(up_states):
-        counts[i] = bit_count_between(up, 0, pos)
+    for i, up in enumerate(up_states_p1):
+        counts[i] = bit_count(up, num_sites)
 
     for dn_idx, dn in enumerate(dn_states_p1):
         if dn & op:
@@ -775,10 +773,13 @@ class CreationOperator(LinearOperator):
         _apply_creation_up(matvec, x, up_states, dn_states, up_states_p1, self.pos)
 
     def _build_dn(self, matvec, x):
+        nsites = self.sector.num_sites
         up_states = self.sector.up_states
         dn_states = self.sector.dn_states
         dn_states_p1 = self.sector_p1.dn_states
-        _apply_creation_dn(matvec, x, up_states, dn_states, dn_states_p1, self.pos)
+        _apply_creation_dn(
+            matvec, x, nsites, up_states, dn_states, dn_states_p1, self.pos
+        )
 
     def _matvec(self, x):
         matvec = np.zeros((self.shape[0], *x.shape[1:]), dtype=x.dtype)
@@ -821,11 +822,12 @@ class AnnihilationOperator(LinearOperator):
         )
 
     def _build_dn(self, matvec, x):
+        num_sites = self.sector.num_sites
         dn_states = self.sector_m1.dn_states
         up_states_p1 = self.sector.up_states
         dn_states_p1 = self.sector.dn_states
         _apply_annihilation_dn(
-            matvec, x, up_states_p1, dn_states, dn_states_p1, self.pos
+            matvec, x, num_sites, up_states_p1, dn_states, dn_states_p1, self.pos
         )
 
     def _matvec(self, x):
