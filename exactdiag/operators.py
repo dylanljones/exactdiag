@@ -471,8 +471,8 @@ def _compute_hopping_term(states, site1, site2, hop):
             yield i, j, sign * hop
 
 
-@njit("(int32[:], int32[:], int32, int32, int32, float64)", **_jitkw)
-def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
+@njit("(int32[:], int32[:], int32, int32, float64)", **_jitkw)
+def project_hopping(up_states, dn_states, site1, site2, hop):
     """Projects the hopping between two sites onto full basis.
 
     Parameters
@@ -481,8 +481,6 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
         An array of all spin-up states in the basis(-sector).
     dn_states : array_like
         An array of all spin-down states in the basis(-sector).
-    num_sites : int
-        The number of sites of the system.
     site1 : int
         The first site of the hopping pair. This has to be the lower index of the two
         sites.
@@ -509,7 +507,7 @@ def project_hopping(up_states, dn_states, num_sites, site1, site2, hop):
     >>> nsites = sector.num_sites
     >>> up, dn = sector.up_states, sector.dn_states
     >>> ham = np.zeros((sector.size, sector.size))
-    >>> for r, c, val in project_hopping(up, dn, nsites, site1=0, site2=1, hop=1.0):
+    >>> for r, c, val in project_hopping(up, dn, site1=0, site2=1, hop=1.0):
     ...     ham[r, c] += val
     >>> ham
     array([[0., 1., 1., 0.],

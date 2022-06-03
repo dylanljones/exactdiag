@@ -6,11 +6,7 @@
 
 import numpy as np
 from .abc import AbstractManyBodyModel
-from ..operators import (
-    project_onsite_energy,
-    project_hopping,
-    project_hubbard_inter,
-)
+from ..operators import project_onsite_energy, project_hopping, project_hubbard_inter
 
 
 class HubbardModel(AbstractManyBodyModel):
@@ -83,4 +79,4 @@ class HubbardModel(AbstractManyBodyModel):
         yield from project_onsite_energy(up_states, dn_states, energy)
         yield from project_hubbard_inter(up_states, dn_states, interaction)
         for i, j in neighbors:
-            yield from project_hopping(up_states, dn_states, num_sites, i, j, hop)
+            yield from project_hopping(up_states, dn_states, i, j, hop)
