@@ -162,7 +162,7 @@ hamop = model.hamilton_operator(n_up=1, n_dn=1)
 
 sector = model.basis.get_sector()
 ham = model.hamiltonian(sector=sector)
-ed.matshow(ham, ticklabels=sector.state_labels())
+ed.matshow(ham, ticklabels=sector.state_labels(), values=True)
 ````
 <p align="center">
   <img src="examples/hubbard_ham.png" width=400 alt="Sublime's custom image"/>
@@ -176,15 +176,10 @@ import numpy as np
 import lattpy as lp
 import exactdiag as ed
 
-num_sites = 5
-u, hop = 4.0, 1.0
-beta = 10.0
+model = ed.models.HubbardModel.chain(num_sites=7, inter=4.0, beta=10.0).hf()
 
-latt = lp.finite_hypercubic(num_sites)
-model = ed.models.HubbardModel(latt, inter=u, hop=hop).hf()
-
-z = np.linspace(-10, +10, 1001) + 1e-1j
-gf = ed.gf_lehmann(model, z, beta, i=2, sigma=ed.UP)[0]
+z = np.linspace(-8, +8, 1001) + 1e-1j
+gf = ed.gf_lehmann(model, z, i=3, sigma=ed.UP)[0]
 ````
 <p align="center">
   <img src="examples/hubbard_gf.png" alt="Sublime's custom image"/>

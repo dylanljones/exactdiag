@@ -5,24 +5,18 @@
 # Copyright (c) 2022, Dylan Jones
 
 import numpy as np
-import lattpy as lp
 import matplotlib.pyplot as plt
 import exactdiag as ed
 
 
 def main():
-    num_sites = 5
-    u, hop = 4.0, 1.0
-    beta = 10.0
+    model = ed.models.HubbardModel.chain(num_sites=7, inter=4.0, beta=10.0).hf()
 
-    latt = lp.finite_hypercubic(num_sites)
-    model = ed.models.HubbardModel(latt, inter=u, hop=hop).hf()
-
-    z = np.linspace(-10, +10, 1001) + 1e-1j
-    gf = ed.gf_lehmann(model, z, beta, i=2, sigma=ed.UP)[0]
+    z = np.linspace(-8, +8, 1001) + 1e-1j
+    gf = ed.gf_lehmann(model, z, i=3, sigma=ed.UP)[0]
 
     fig, ax = plt.subplots()
-    ax.plot(z.real, -gf.imag)
+    ax.plot(z.real, -gf.imag / np.pi)
     ax.grid()
     ax.set_ylim(0, None)
     ax.set_xlim(z[0].real, z[-1].real)
