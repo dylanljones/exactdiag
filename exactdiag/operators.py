@@ -446,7 +446,6 @@ def _compute_hopping_term(states, site1, site2, hop):
         occ2 = ini & op2  # Value of bit of state with index `site2`
         new = tmp ^ op2  # Create/annihilate electron at `site1`
 
-        # ToDo: Account for hop-overs of other spin flavour
         if occ1 and not occ2:
             # Hopping from `site1` to `site2` possible
             sign = (-1) ** bit_count_between(ini, site1 + 1, site2)
