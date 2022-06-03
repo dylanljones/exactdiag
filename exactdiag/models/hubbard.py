@@ -36,7 +36,7 @@ class HubbardModel(AbstractManyBodyModel):
             # Argument is a lattice instance
             latt = args[0]
             num_sites = latt.num_sites
-            neighbors = latt.neighbor_pairs(True)[0]
+            neighbors = latt.neighbor_pairs(unique=True)[0]
         else:
             # Aurgument is the number of sites and the neighbor data
             num_sites, neighbors = args
