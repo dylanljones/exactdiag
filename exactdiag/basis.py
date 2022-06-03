@@ -76,7 +76,16 @@ def state_label(up_num: int, dn_num: int, digits: int = None) -> str:
     for i in range(num_chars):
         u = up_num >> i & 1
         d = dn_num >> i & 1
-        chars.append(SPIN_CHARS[u + (d << 1)])
+        if u and not d:
+            char = UP_CHAR
+        elif not u and d:
+            char = DN_CHAR
+        elif u and d:
+            char = UD_CHAR
+        else:
+            char = EMPTY_CHAR
+        chars.append(char)
+        # chars.append(SPIN_CHARS[u + (d << 1)])
     label = "".join(chars[::_LABELORDERER])
     return label
 
