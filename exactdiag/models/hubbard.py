@@ -73,10 +73,17 @@ class HubbardModel(AbstractManyBodyModel):
         hop = self.hop
         num_sites = self.num_sites
         neighbors = self.neighbors
-        energy = np.full(num_sites, eps)
-        interaction = np.full(num_sites, inter)
+        energy = np.full(num_sites, eps, dtype=np.float64)
+        interaction = np.full(num_sites, inter, dtype=np.float64)
 
         yield from project_onsite_energy(up_states, dn_states, energy)
         yield from project_hubbard_inter(up_states, dn_states, interaction)
         for i, j in neighbors:
-            yield from project_hopping(up_states, dn_states, i, j, hop)
+            yield from project_hopping(up_states, dn_states, i, j, float(hop))
+
+    def _hamiltonian_data0(self):
+        for i in range(self.num_sites):
+            yield i, i, self.eps
+        for i, j in self.neighbors:
+            yield i, j, self.hop
+            yield j, i, self.hop

@@ -248,3 +248,25 @@ class AbstractManyBodyModel(ModelParameters, ABC):
     def hamiltonian(self, n_up=None, n_dn=None, sector=None, dtype=None):
         hamop = self.hamilton_operator(n_up, n_dn, sector, dtype)
         return hamop.toarray()
+
+    def _hamiltonian_data0(self):
+        raise NotImplementedError()
+
+    def hamiltonian_data0(self):
+        rows, cols, data = list(), list(), list()
+        for row, col, val in self._hamiltonian_data0():
+            rows.append(row)
+            cols.append(col)
+            data.append(val)
+        return data, np.array([rows, cols], dtype=np.int64)
+
+    def hamilton_operator0(self, dtype=None):
+        size = self.num_sites
+        data, indices = self.hamiltonian_data0()
+        return HamiltonOperator(size, data, indices, dtype=dtype)
+
+    def hamiltonian0(self, dtype=None):
+        ham = np.zeros((self.num_sites, self.num_sites), dtype=dtype)
+        for i, j, val in self._hamiltonian_data0():
+            ham[i, j] = val
+        return ham
