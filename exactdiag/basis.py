@@ -4,7 +4,16 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
-"""Tools for handling and representing (fermionic) Fock basis-states."""
+"""Tools for handling and representing (fermionic) Fock basis-states.
+
+States are stored as two integers for the spin-up and spin-down state. The bits of the
+two numbers represent the filling of the spin-up or spin-down particles, for example
+.. math::
+    |ψ⟩ = |↑ ⇅ ↓> = |ψ_↑⟩ ⊗ |ψ_↓⟩ = |011⟩ ⊗ |110⟩ = |3⟩ ⊗ |6⟩
+
+Note that state labels (i.e .math:'|↑ ⇅ ↓>') count the site-indices from left to right
+and bit-representations from right to left (little endianess).
+"""
 
 import numpy as np
 from itertools import product, permutations

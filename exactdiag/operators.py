@@ -4,7 +4,19 @@
 #
 # Copyright (c) 2022, Dylan Jones
 
-"""This module contains tools for working with linear operators in sparse format."""
+"""This module contains tools for working with linear operators in sparse format.
+
+The ordering of the creation/annihilation operators of basis states uses the following
+convention: First, all spin-up creation operators are filled up from left to right
+with increasing site index. Then, the spin-down operators are added, e.g.:
+.. math::
+    |ψ⟩ = c^†_{0,↑} ... c^†_{N-1,↑} c^†_{0,↓} ... c^†_{N-1,↓} |0⟩
+    ⟨ψ| = ⟨0| c_{N-1,↓} ... c_{0,↓} c_{N-1,↑} ... c_{0,↑}
+
+The ordering of the operators is important for the computation of signs in the
+hopping terms of Hamilton operators and the matrix representation of the
+creation/annihilation operators.
+"""
 
 import abc
 import hashlib
