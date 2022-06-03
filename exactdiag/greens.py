@@ -17,7 +17,6 @@ from .operators import AnnihilationOperator, CreationOperator
 from .linalg import compute_ground_state
 from ._expm_multiply import expm_multiply
 
-# from scipy.sparse.linalg import expm_multiply
 logger = logging.getLogger(__name__)
 
 _jitkw = dict(fastmath=True, nogil=True, parallel=True, cache=True)
@@ -387,7 +386,7 @@ def _compute_gf(model, z, i, j, sigma, eig_cache=None, directory=None):
     return gf
 
 
-def compute_gf_diag(model, z, sigma=UP, eig_cache=None, directory=None):
+def _compute_gf_diag(model, z, sigma=UP, eig_cache=None, directory=None):
     eig_cache = dict() if eig_cache is None else eig_cache
     data = np.zeros((len(z), model.num_sites), dtype=np.complex128)
     for i in range(model.num_sites):
@@ -395,7 +394,7 @@ def compute_gf_diag(model, z, sigma=UP, eig_cache=None, directory=None):
     return data
 
 
-def compute_gf_full(model, z, sigma=UP, eig_cache=None, directory=None):
+def _compute_gf_matrix(model, z, sigma=UP, eig_cache=None, directory=None):
     eig_cache = dict() if eig_cache is None else eig_cache
     num = model.num_sites
     data = np.zeros((len(z), num, num), dtype=np.complex128)
@@ -406,6 +405,24 @@ def compute_gf_full(model, z, sigma=UP, eig_cache=None, directory=None):
             if i < j:
                 data[:, j, i] = gf
     return data
+
+
+def compute_gf_lehmann(model, z, mode="diag", sigma=UP, eig_cache=None, directory=None):
+    eig_cache = dict() if eig_cache is None else eig_cache
+    if isinstance(mode, str):
+        if mode in ("diag", "total"):
+            data = _compute_gf_diag(model, z, sigma, eig_cache, directory)
+            if mode == "total":
+                data = np.sum(data, axis=-1)
+            return data
+        elif mode == "full":
+            return _compute_gf_matrix(model, z, sigma, eig_cache, directory)
+    else:
+        if isinstance(mode, int):
+            return _compute_gf(model, z, mode, mode, sigma, eig_cache, directory)
+        else:
+            i, j = mode
+            return _compute_gf(model, z, i, j, sigma, eig_cache, directory)
 
 
 def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):

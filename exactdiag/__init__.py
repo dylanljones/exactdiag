@@ -53,7 +53,14 @@ from .operators import (
 )
 from exactdiag.models.abc import ModelParameters, AbstractManyBodyModel
 from .cache import AbstractCache, EigenCache, EigenCacheHDF5
-from .greens import gf0_pole, gf_lehmann, gf_greater, gf_lesser, gf_tevo
+from .greens import (
+    gf0_pole,
+    gf_lehmann,
+    compute_gf_lehmann,
+    gf_greater,
+    gf_lesser,
+    gf_tevo,
+)
 
 try:
     from ._version import version as __version__
