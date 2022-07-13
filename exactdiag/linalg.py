@@ -19,15 +19,14 @@ class EigenState(NamedTuple):
     n_dn: int = None
 
 
-def compute_ground_state(basis, model, thresh=20):
+def compute_ground_state(model, thresh=20):
     """Computes the ground state by iterating over the sectors of the Hamiltonian.
 
     Parameters
     ----------
-    basis : Basis
-        The many body state basis of the system.
     model : Model
-        The model instance responsible for generating the Hamiltonian matrix.
+        The model instance responsible for generating the Hamiltonian matrix. Also
+        must contain the many body state basis of the system.
     thresh : int, optional
         The sector size threshold after which scipy's sparse linear algebra methods are
         used instead of the dense methods.
@@ -37,6 +36,7 @@ def compute_ground_state(basis, model, thresh=20):
     gs : EigenState
         The ground eigen state.
     """
+    basis = model.basis
     gs = EigenState()
     for sector in basis.iter_sectors():
         sham = model.hamilton_operator(sector=sector)
@@ -56,33 +56,3 @@ def compute_ground_state(basis, model, thresh=20):
         if energy < gs.energy:
             gs = EigenState(energy, state, sector.n_up, sector.n_dn)
     return gs
-
-
-def solve_ground_state(basis, model, thresh=20):
-    """Computes the ground state by solving the full Hamiltonian.
-
-    Parameters
-    ----------
-    basis : Basis
-        The many body state basis of the system.
-    model : Model
-        The model instance responsible for generating the Hamiltonian matrix.
-    thresh : int, optional
-        The sector size threshold after which scipy's sparse linear algebra methods are
-        used instead of the dense methods.
-
-    Returns
-    -------
-    gs : EigenState
-        The ground eigen state.
-    """
-    sector = basis.get_sector()
-    sham = model.shamiltonian(sector)
-    if sham.shape[0] <= thresh:
-        energies, vectors = la.eigh(sham.toarray())
-        idx = np.argmin(energies)
-        energy, state = energies[idx], vectors[:, idx]
-    else:
-        energies, vectors = sla.eigsh(sham, k=1, which="SA")
-        energy, state = energies[0], vectors[:, 0]
-    return EigenState(energy, state)

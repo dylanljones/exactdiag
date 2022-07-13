@@ -11,7 +11,6 @@ from numpy.lib.stride_tricks import as_strided  # noqa
 import scipy.sparse
 from scipy import linalg as la
 import scipy.sparse.linalg as sla
-from typing import NamedTuple
 from functools import partial
 from abc import ABC, abstractmethod
 from matplotlib import colors
@@ -35,18 +34,9 @@ __all__ = [
     "EigenDecomposition",
     "QRDecomposition",
     "SVDDecomposition",
-    "EigenState",
 ]
 
 transpose = partial(np.swapaxes, axis1=-2, axis2=-1)
-
-
-class EigenState(NamedTuple):
-
-    energy: float = np.infty
-    state: np.ndarray = None
-    n_up: int = None
-    n_dn: int = None
 
 
 class MidpointNormalize(colors.Normalize):
