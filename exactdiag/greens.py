@@ -10,6 +10,7 @@ import shutil
 import logging
 import numpy as np
 from numba import njit, prange
+from functools import partial
 from typing import MutableMapping
 from .basis import Sector, UP
 from .models import AbstractManyBodyModel
@@ -19,10 +20,12 @@ from ._expm_multiply import expm_multiply
 
 logger = logging.getLogger(__name__)
 
+transpose = partial(np.swapaxes, axis1=-2, axis2=-1)
+
 _jitkw = dict(fastmath=True, nogil=True, parallel=True, cache=True)
 
 
-def gf0_pole(*args, z, mode="diag") -> np.ndarray:
+def gf0_pole_old(*args, z, mode="diag") -> np.ndarray:
     """Calculate the non-interacting Green's function.
 
     Parameters
@@ -65,6 +68,120 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
         )
     arg = np.subtract.outer(z, eigvals)
     return np.einsum(subscript_str, eigvecs_adj, 1 / arg, eigvecs)
+
+
+def gf0_resolvent(ham, z, mode="diag"):
+    r"""Calculates the non-interacting resolvent Green's function.
+
+    The resolvent Green's function is defined as
+    .. math::
+        G_{ij}(z) = [z - H]^{-1}_{ij}
+
+    Parameters
+    ----------
+    ham : (N, N) np.ndarray
+        The Hamilton operator H in matrix respresentation.
+    z : (...) complex np.ndarray or complex
+        Green's function is evaluated at complex frequency `z`.
+    mode : str, optional
+        The output mode of the method. Can either be 'full', 'diag' or 'trace'.
+        The default mode is 'diag'. Mode 'full' computes the full Green's function
+        matrix, 'diag' the diagonal and 'trace' computes the trace of the Green's
+        function matrix.
+
+    Returns
+    -------
+    gf : complex np.ndarray
+        The Green's function G evaluated at `z`. The shape depends on the mode.
+        The shape for mode 'full' is (..., N, N), the shape for mode 'diag'
+        is (..., N) and the shape for mode 'trace' is the same shape as `z`.
+    """
+    # Compute resolvent Green's function
+    z = np.atleast_1d(z)
+    gfmat = np.zeros((z.shape[0], *ham.shape), dtype=np.complex64)
+    eye = np.eye(ham.shape[0], dtype=np.complex64)
+    for i in range(z.shape[0]):
+        gfmat[i] = np.linalg.inv(z[i] * eye - ham)
+
+    mode = mode.lower()
+    if "full".startswith(mode) or "matrix".startswith(mode):
+        # Full GF matrix
+        gf = gfmat
+    elif "diag".startswith(mode):
+        # Diagonal of GF matrix
+        gf = np.diagonal(gfmat, axis1=-2, axis2=-1)
+    elif "trace".startswith(mode):
+        # Trace of GF matrix
+        gf = np.trace(gfmat, axis1=-2, axis2=-1)
+    else:
+        raise ValueError(
+            f"Mode '{mode}' not supported. "
+            f"Valid modes are 'full', 'diag' or 'total'"
+        )
+    return gf
+
+
+def gf0_pole(*args, z, mode="diag") -> np.ndarray:
+    r"""Calculates the non-interacting Green's function using an eigen-decomposition.
+
+    The Green's function in the eigen-basis is defined as
+    .. math::
+        G_i(z) = 1 / (z - E_i),
+
+    where .math:`E_i` is the i-th eigenvalue of the Hamiltonian H.
+
+    Parameters
+    ----------
+    *args : tuple of np.ndarray
+        Input arguments. This can either be a tuple of size two, containing arrays of
+        eigenvalues and eigenvectors or a single argument, interpreted as
+        Hamilton-operator H and used to compute the eigenvalues and eigenvectors used in
+        the calculation.
+    z : (...) complex np.ndarray or complex
+        Green's function is evaluated at complex frequency `z`.
+    mode : str, optional
+        The output mode of the method. Can either be 'full', 'diag', 'trace' or the
+        operand-string for `np.einsum`. The default mode is 'diag'.
+        Mode 'full' computes the full Green's function matrix, 'diag' the diagonal and
+        'trace' computes the trace of the Green's function matrix.
+
+    Returns
+    -------
+    gf : complex np.ndarray
+        The Green's function evaluated at `z`. The shape depends on the mode. The shape
+        for mode 'full' is (..., N, N), the shape for mode 'diag' is (..., N) and
+        the shape for mode 'trace' is the same shape as `z`.
+    """
+    if len(args) == 1:
+        xi, rv = np.linalg.eigh(args[0])
+    else:
+        xi, rv = args
+    lv = rv.conj().T
+
+    mode = mode.lower()
+
+    # Construct Green's function in eigen basis
+    if hasattr(z, "__len__"):
+        xi = 1 / np.subtract.outer(z, xi)
+    else:
+        xi = 1 / (z - xi)
+
+    if "full".startswith(mode) or "matrix".startswith(mode):
+        # Full GF matrix
+        # gf = np.einsum("ik,...k,kj->...ij", lv, xi, rv)
+        gf = (rv * xi[..., np.newaxis, :]) @ lv
+    elif "diag".startswith(mode):
+        # Diagonal of GF matrix
+        gf = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
+    elif "trace".startswith(mode):
+        # Trace of GF matrix
+        diag = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
+        gf = np.sum(diag, axis=-1)
+    else:
+        # Undefined, use mode as input for einsum
+        gf = np.einsum(mode, rv, xi, lv)
+
+    return gf
 
 
 def solve_sector(
