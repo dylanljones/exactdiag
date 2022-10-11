@@ -25,51 +25,6 @@ transpose = partial(np.swapaxes, axis1=-2, axis2=-1)
 _jitkw = dict(fastmath=True, nogil=True, parallel=True, cache=True)
 
 
-def gf0_pole_old(*args, z, mode="diag") -> np.ndarray:
-    """Calculate the non-interacting Green's function.
-
-    Parameters
-    ----------
-    *args : tuple of np.ndarray
-        Input argument. This can either be a tuple of size two, containing arrays of
-        eigenvalues and eigenvectors or a single argument, interpreted as
-        Hamilton-operator and used to compute the eigenvalues and eigenvectors used in
-        the calculation. The eigenvectors of the Hamiltonian.
-    z : (..., Nw) complex np.ndarray or complex
-        Green's function is evaluated at complex frequency `z`.
-    mode : str, optional
-        The output mode of the method. Can either be 'full', 'diag' or 'total'.
-        The default is 'diag'. Mode 'full' computes the full Green's function matrix,
-        'diag' the diagonal and 'total' computes the trace of the Green's function.
-
-    Returns
-    -------
-    gf : (...., Nw, N) complex np.ndarray or (...., Nw, N, N) complex np.ndarray
-        The Green's function evaluated at `z`.
-    """
-    if len(args) == 1:
-        eigvals, eigvecs = np.linalg.eigh(args[0])
-    else:
-        eigvals, eigvecs = args
-
-    z = np.atleast_1d(z)
-    eigvecs_adj = np.conj(eigvecs).T
-
-    if mode == "full":
-        subscript_str = "ik,...k,kj->...ij"
-    elif mode == "diag":
-        subscript_str = "ij,...j,ji->...i"
-    elif mode == "total":
-        subscript_str = "ij,...j,ji->..."
-    else:
-        raise ValueError(
-            f"Mode '{mode}' not supported. "
-            f"Valid modes are 'full', 'diag' or 'total'"
-        )
-    arg = np.subtract.outer(z, eigvals)
-    return np.einsum(subscript_str, eigvecs_adj, 1 / arg, eigvecs)
-
-
 def gf0_resolvent(ham, z, mode="diag"):
     r"""Calculates the non-interacting resolvent Green's function.
 

@@ -10,7 +10,7 @@ import gftool as gt
 from pytest import mark
 from numpy.testing import assert_allclose
 import exactdiag as ed
-from exactdiag.greens import gf0_resolvent, gf0_pole, gf0_pole_old, gf_lehmann
+from exactdiag.greens import gf0_resolvent, gf0_pole, gf_lehmann
 
 
 def tight_binding_hamiltonian(latt, eps=0.0, hop=1.0):
@@ -19,20 +19,6 @@ def tight_binding_hamiltonian(latt, eps=0.0, hop=1.0):
     data[dmap.onsite()] = eps
     data[dmap.hopping()] = hop
     return dmap.build_csr(data).toarray()
-
-
-@mark.parametrize("num_sites", [2, 3, 4, 5, 6])
-@mark.parametrize("periodic", [False, True])
-@mark.parametrize("mode", ["full", "diag", "total"])
-def test_gf0_pole_old(num_sites, periodic, mode):
-    z = np.linspace(-6, +6, 1001) + 0.01j
-
-    latt = lp.finite_hypercubic(num_sites, periodic=periodic)
-    ham = tight_binding_hamiltonian(latt, eps=0.0, hop=1.0)
-
-    gfr = gf0_resolvent(ham, z, mode=mode)
-    gfp = gf0_pole_old(ham, z=z, mode=mode)
-    assert_allclose(gfp, gfr, rtol=1e-4)
 
 
 @mark.parametrize("num_sites", [2, 3, 4, 5, 6])
