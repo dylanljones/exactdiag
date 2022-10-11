@@ -9,6 +9,7 @@
 import numpy as np
 from numpy.lib.stride_tricks import as_strided  # noqa
 import scipy.sparse
+from scipy.sparse import spmatrix
 from scipy import linalg as la
 import scipy.sparse.linalg as sla
 from functools import partial
@@ -118,7 +119,7 @@ def matshow(
     if isinstance(mat, sla.LinearOperator):
         x = np.eye(mat.shape[1], dtype=mat.dtype)
         mat = mat.matmat(x)
-    elif isinstance(mat, scipy.sparse.spmatrix):
+    elif isinstance(mat, spmatrix):
         mat = mat.toarray()
     else:
         mat = np.asarray(mat)
