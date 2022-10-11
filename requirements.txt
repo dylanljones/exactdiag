@@ -9,3 +9,4 @@ matplotlib>=3.0.0
 colorcet>=2.0.0
 lattpy>=0.7.6
 h5py
+gftool
