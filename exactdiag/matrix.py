@@ -8,7 +8,6 @@
 
 import numpy as np
 from numpy.lib.stride_tricks import as_strided  # noqa
-import scipy.sparse
 from scipy.sparse import spmatrix
 from scipy import linalg as la
 import scipy.sparse.linalg as sla
@@ -302,7 +301,7 @@ def decompose_eig(arr, h=None):
         xi, vr = np.linalg.eigh(arr)
         vl = np.conj(vr.T)
     else:
-        xi, vl, vr = scipy.linalg.eig(arr, left=True, right=True)
+        xi, vl, vr = la.eig(arr, left=True, right=True)
     return vr, xi, vl
 
 
