@@ -35,7 +35,6 @@ from .matrix import (
     EigenDecomposition,
     QRDecomposition,
     SVDDecomposition,
-    EigenState,
 )
 
 from .operators import (
@@ -53,6 +52,7 @@ from .operators import (
 )
 from exactdiag.models.abc import ModelParameters, AbstractManyBodyModel
 from .cache import AbstractCache, EigenCache, EigenCacheHDF5
+from .linalg import EigenState, compute_ground_state
 from .greens import (
     gf0_pole,
     gf_lehmann,

@@ -273,16 +273,45 @@ def double_occupation(up_states, dn_states, evals, evecs, beta, emin, pos):
     return occ
 
 
+@njit("void(c16[:], c16[:], f8, f8[:], f8[:,::1], f8[::1])", **_jitkw)
+def _acc_gf_diag_t0(gf, z, eval_0, evals_m, evecs_m, cdg_ev_0):
+    # Compute overlap |<m|c_j^†|0>|²
+    overlap = np.abs(evecs_m.T.conj() @ cdg_ev_0) ** 2
+    # Accumulate
+    for m in prange(len(evals_m)):
+        pole1 = z - evals_m[m] + eval_0
+        pole2 = z - eval_0 + evals_m[m]
+        gf += overlap[m] * (1 / pole1 + 1 / pole2)
+
+
+@njit("void(c16[:],c16[:],f8[:,::1],f8[::1],f8,f8[::1],f8[:],f8[:,::1])", **_jitkw)
+def _acc_gf_t0(gf, z, c_ev_m, cdg_ev_0, eval_0, evec_0, evals_m, evecs_m):
+    # Compute overlap <0|c_i|m><m|c_j^†|0>
+    overlap = (evec_0.conj() @ c_ev_m) * (evecs_m.T.conj() @ cdg_ev_0)
+    # Accumulate
+    for m in prange(len(evals_m)):
+        pole1 = z - evals_m[m] + eval_0
+        pole2 = z - eval_0 + evals_m[m]
+        gf += overlap[m] * (1 / pole1 + 1 / pole2)
+
+
+def accumulate_gf_diag_t0(gf, z, cdag, eval_0, evec_0, evals_p1, evecs_p1):
+    cdg_ev_0 = cdag.matvec(evec_0)
+    _acc_gf_diag_t0(gf, z, eval_0, evals_p1, evecs_p1, cdg_ev_0)
+
+
+def accumulate_gf_t0(gf, z, cop, cdag, eval_0, evec_0, evals_p1, evecs_p1):
+    c_ev_m = cop.matmat(evecs_p1)
+    cd_ev_0 = cdag.matvec(evec_0)
+    _acc_gf_t0(gf, z, c_ev_m, cd_ev_0, eval_0, evec_0, evals_p1, evecs_p1)
+
+
 @njit("void(c16[:], c16[:], f8[:], f8[:], f8[:,::1], f8[:,::1], f8, f8)", **_jitkw)
 def _acc_gf_diag(gf, z, evals, evals_p1, evecs_p1, cdag_evec, beta, emin):
     overlap = np.abs(evecs_p1.T.conj() @ cdag_evec) ** 2
 
-    if np.isfinite(beta):
-        exp_evals = np.exp(-beta * (evals - emin))
-        exp_evals_p1 = np.exp(-beta * (evals_p1 - emin))
-    else:
-        exp_evals = np.ones_like(evals)
-        exp_evals_p1 = np.ones_like(evals_p1)
+    exp_evals = np.exp(-beta * (evals - emin))
+    exp_evals_p1 = np.exp(-beta * (evals_p1 - emin))
 
     num_m = len(evals_p1)
     num_n = len(evals)
@@ -303,12 +332,8 @@ def _acc_gf(gf, z, c_evec_m, cdag_evec_n, evals_n, evecs_n, evals_m, evecs_m, be
     overlap1 = evecs_n.T.conj() @ c_evec_m  # <n|c_i|m>
     overlap2 = evecs_m.T.conj() @ cdag_evec_n  # <m|c_j^†|n>
 
-    if np.isfinite(beta):
-        exp_n = np.exp(-beta * (evals_n - e0))
-        exp_m = np.exp(-beta * (evals_m - e0))
-    else:
-        exp_n = np.ones_like(evals_n)
-        exp_m = np.ones_like(evals_m)
+    exp_n = np.exp(-beta * (evals_n - e0))
+    exp_m = np.exp(-beta * (evals_m - e0))
 
     num_n, num_m = len(evals_n), len(evals_m)
     for m in prange(num_m):
@@ -441,13 +466,13 @@ def gf_lehmann(
     logger.debug("Sites: %s (%s states)", basis.num_sites, basis.size)
 
     data = GreensFunctionMeasurement(z, model.beta, i, j, sigma, measure_occ=occ)
-    fillings = list(basis.iter_fillings())
-    num = len(fillings)
-    w = len(str(num))
 
     if cache_dir is not None and not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
+    fillings = list(basis.iter_fillings())
+    num = len(fillings)
+    w = len(str(num))
     for it, (n_up, n_dn) in enumerate(fillings):
         sector = model.get_sector(n_up, n_dn)
         logger.info("[%s/%s] Sector %s, %s", f"{it+1:>{w}}", num, n_up, n_dn)
@@ -475,6 +500,39 @@ def gf_lehmann(
         logger.info("occupation:  %.4f", data.occ)
         logger.info("double-occ:  %.4f", data.occ_double)
     return data.gf, data.occ, data.occ_double
+
+
+def gf_lehmann_t0(model, z, i=0, j=None, sigma=UP, eig_cache=None):
+    if j is None:
+        j = i
+    basis = model.basis
+    eig_cache = eig_cache if eig_cache is not None else dict()
+
+    logger.info("Accumulating Lehmann sum T=0 (i=%s, j=%s, sigma=%s)", i, j, sigma)
+    logger.debug("Sites: %s (%s states)", basis.num_sites, basis.size)
+
+    # Compute ground state
+    gs = compute_ground_state(model)
+    eval_0 = gs.energy
+    evec_0 = gs.state
+    logger.debug("Ground state sector: %s, %s", gs.n_up, gs.n_dn)
+    # Get sector of ground state and upper sector
+    sector = basis.get_sector(gs.n_up, gs.n_dn)
+    sector_p1 = basis.upper_sector(gs.n_up, gs.n_dn, sigma)  # States |ḿ>
+
+    gf = np.zeros_like(z)
+    if sector_p1:
+        # Solve sector |m>
+        evals_m, evecs_m = solve_sector(model, sector_p1, cache=eig_cache)
+        # Accumulate GF
+        cdg = CreationOperator(sector, sector_p1, pos=j, sigma=sigma)
+        if i == j:
+            accumulate_gf_diag_t0(gf, z, cdg, eval_0, evec_0, evals_m, evecs_m)
+        else:
+            c = AnnihilationOperator(sector, sector_p1, pos=i, sigma=sigma)
+            accumulate_gf_t0(gf, z, c, cdg, eval_0, evec_0, evals_m, evecs_m)
+
+    return gf
 
 
 def _compute_gf(model, z, i, j, sigma, eig_cache=None, directory=None):
@@ -540,6 +598,9 @@ def compute_gf_lehmann(model, z, mode="diag", sigma=UP, eig_cache=None, director
         else:
             i, j = mode
             return _compute_gf(model, z, i, j, sigma, eig_cache, directory)
+
+
+# -- Time dependent Green's functions --------------------------------------------------
 
 
 def gf_greater(model, gs, start, stop, num=1000, pos=0, sigma=UP):
@@ -685,7 +746,7 @@ def gf_tevo(model, start, stop, num=1000, pos=0, sigma=UP):
     gf_t : (N, ) np.ndarray
         The retarded Green's function evaluated at the times.
     """
-    gs = compute_ground_state(model.basis, model)
+    gs = compute_ground_state(model)
     times, gf_g = gf_greater(model, gs, start, stop, num, pos, sigma)
     times, gf_l = gf_lesser(model, gs, start, stop, num, pos, sigma)
     return times, gf_g - gf_l
