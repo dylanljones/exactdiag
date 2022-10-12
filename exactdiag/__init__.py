@@ -55,6 +55,7 @@ from .cache import AbstractCache, EigenCache, EigenCacheHDF5
 from .linalg import EigenState, compute_ground_state
 from .greens import (
     gf0_pole,
+    gf0_resolvent,
     gf_lehmann,
     compute_gf_lehmann,
     gf_greater,
