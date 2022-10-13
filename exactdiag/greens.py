@@ -76,8 +76,8 @@ def gf0_resolvent(ham, z, mode="diag"):
     return gf
 
 
-def gf0_pole(*args, z, mode="diag") -> np.ndarray:
-    r"""Calculates the non-interacting Green's function using an eigen-decomposition.
+def gf0_eig(*args, z, mode="diag") -> np.ndarray:
+    r"""Calculates the Green's function in the eigen basis using an eigen-decomposition.
 
     The Green's function in the eigen-basis is defined as
     .. math::
@@ -103,9 +103,72 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
     Returns
     -------
     gf : complex np.ndarray
-        The Green's function evaluated at `z`. The shape depends on the mode. The shape
-        for mode 'full' is (..., N, N), the shape for mode 'diag' is (..., N) and
-        the shape for mode 'trace' is the same shape as `z`.
+        The Green's function evaluated at `z` in the eigen basis. The shape depends
+        on the specified mode. The shape for mode 'full' is (..., N, N),
+        the shape for mode 'diag' is (..., N) and the shape for mode 'trace' is the
+        same shape as the input shape of `z`.
+    """
+    z = np.atleast_1d(z)
+
+    if len(args) == 1:
+        xi, rv = np.linalg.eigh(args[0])
+    else:
+        xi, rv = args
+
+    mode = mode.lower()
+
+    # Construct Green's function in eigen basis
+    xi = 1 / np.subtract.outer(z, xi)
+
+    if "full".startswith(mode) or "matrix".startswith(mode):
+        # Full GF matrix
+        gf = np.eye(xi.shape[-1]) * xi[:, np.newaxis, :]
+    elif "diag".startswith(mode):
+        # Diagonal of GF matrix
+        gf = xi
+    elif "trace".startswith(mode):
+        # Trace of GF matrix
+        gf = np.sum(xi, axis=-1)
+    else:
+        raise ValueError(
+            f"Mode '{mode}' not supported. "
+            f"Valid modes are 'full', 'diag' or 'total'"
+        )
+
+    return gf
+
+
+def gf0_pole(*args, z, mode="diag") -> np.ndarray:
+    r"""Calculates the Green's function in the local basis using an eigen-decomposition.
+
+    The Green's function in the eigen-basis is defined as
+    .. math::
+        G_i(z) = 1 / (z - E_i),
+
+    where .math:`E_i` is the i-th eigenvalue of the Hamiltonian H.
+
+    Parameters
+    ----------
+    *args : tuple of np.ndarray
+        Input arguments. This can either be a tuple of size two, containing arrays of
+        eigenvalues and eigenvectors or a single argument, interpreted as
+        Hamilton-operator H and used to compute the eigenvalues and eigenvectors used in
+        the calculation.
+    z : (...) complex np.ndarray or complex
+        Green's function is evaluated at complex frequency `z`.
+    mode : str, optional
+        The output mode of the method. Can either be 'full', 'diag', 'trace' or the
+        operand-string for `np.einsum`. The default mode is 'diag'.
+        Mode 'full' computes the full Green's function matrix, 'diag' the diagonal and
+        'trace' computes the trace of the Green's function matrix.
+
+    Returns
+    -------
+    gf : complex np.ndarray
+        The Green's function evaluated at `z` in the local basis. The shape depends
+        on the specified mode. The shape for mode 'full' is (..., N, N),
+        the shape for mode 'diag' is (..., N) and the shape for mode 'trace' is the
+        same shape as the input shape of `z`.
     """
     if len(args) == 1:
         xi, rv = np.linalg.eigh(args[0])
@@ -133,8 +196,10 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
         diag = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
         gf = np.sum(diag, axis=-1)
     else:
-        # Undefined, use mode as input for einsum
-        gf = np.einsum(mode, rv, xi, lv)
+        raise ValueError(
+            f"Mode '{mode}' not supported. "
+            f"Valid modes are 'full', 'diag' or 'total'"
+        )
 
     return gf
 
