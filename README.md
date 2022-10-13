@@ -129,7 +129,7 @@ models or use one of the following included models:
 | Module     | Description                                         | Lattice support    |
 |:-----------|:----------------------------------------------------|:-------------------|
 | abc        | Model-Parameter container and abstract base classes | -                  |
-| anderson   | Anderson imurity models                             | :x:                |
+| anderson   | Anderson impurity models                            | :x:                |
 | hubbard    | Hubbard model                                       | :heavy_check_mark: |              |
 
 
@@ -157,8 +157,10 @@ in operator or matrix representation:
 ````python
 model = ed.models.HubbardModel(num_sites=2, neighbors=[[0, 1]], inter=2)
 
+# Sector n↑=1, n↓=1
 hamop = model.hamilton_operator(n_up=1, n_dn=1)
 
+# Full basis
 sector = model.basis.get_sector()
 ham = model.hamiltonian(sector=sector)
 ed.matshow(ham, ticklabels=sector.state_labels(), values=True)
@@ -169,7 +171,8 @@ ed.matshow(ham, ticklabels=sector.state_labels(), values=True)
 
 ### Green's function
 
-Using a custom defined model or one of the included models the Green's function can be computed:
+Using a custom defined model or one of the included models the one-particle
+(many-body) Green's function can be computed, for example using the Lehmann sum:
 ````python
 import numpy as np
 import exactdiag as ed
