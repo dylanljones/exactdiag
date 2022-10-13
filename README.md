@@ -107,11 +107,12 @@ The Hubbard Hamilton-operator, for example, can then be constructed as follows:
 def hubbard_hamiltonian_data(sector):
     up_states = sector.up_states
     dn_states = sector.dn_states
+    # Hubbard interaction
     yield from ed.project_hubbard_inter(up_states, dn_states, u=[2.0, 2.0])
+    # Hopping between sites 0 and 1
     yield from ed.project_hopping(up_states, dn_states, site1=0, site2=1, hop=1.0)
 
 rows, cols, data = list(), list(), list()
-# Hubbard interaction
 for i, j, val in hubbard_hamiltonian_data(sector):
     rows.append(i)
     cols.append(j)
