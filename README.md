@@ -93,14 +93,12 @@ Converting the operator to an array yields
 ````
 
 Many-Body Hamiltonian matrices can be constructed by projecting the
-elements onto a basis sector. First, the basis and matrix array have to be initialized:
+elements onto a basis sector. First, the basis has to be initialized:
 ````python
-import numpy as np
 import exactdiag as ed
 
 basis = ed.Basis(num_sites=2)
 sector = basis.get_sector()  # Full basis
-ham = np.zeros((sector.size, sector.size))
 ````
 
 The Hubbard Hamilton-operator, for example, can then be constructed as follows:
