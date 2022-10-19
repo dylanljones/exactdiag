@@ -20,6 +20,7 @@ import colorcet as cc
 __all__ = [
     "transpose",
     "matshow",
+    "cmatshow",
     "hermitian",
     "is_hermitian",
     "diagonal",
@@ -85,6 +86,7 @@ def matshow(
     xrotation=45,
     normoffset=0.2,
     normcenter=0.0,
+    frmt=".1f",
     ax=None,
 ):
     """Plots a two-dimensional array.
@@ -112,6 +114,8 @@ def matshow(
         Offset of norm used for colormap.
     normcenter : float or None, optional
         The center of the colormap norm. If `None`, the colormap will not be centered!
+    frmt : str, optional
+        The format specifier for formatting the values (only used if `values=True`)
     ax : plt.Axes, optional
         Axes item
     """
@@ -142,13 +146,12 @@ def matshow(
     im = ax.matshow(mat, cmap=cmap, norm=norm)
 
     if values:
-        dec = 1
         for i in range(mat.shape[0]):
             for j in range(mat.shape[1]):
                 val = mat[i, j]
                 if val:
                     center = np.array([i, j])
-                    ax.text(*center, s=f"{val:.{dec}f}", va="center", ha="center")
+                    ax.text(*center, s=f"{val:{frmt}}", va="center", ha="center")
 
     if colorbar:
         fig.colorbar(im, ax=ax)
@@ -166,6 +169,14 @@ def matshow(
     fig.tight_layout()
 
     return ax
+
+
+def cmatshow(mat, **kwargs):
+    ax_real = matshow(mat.real, **kwargs)
+    ax_imag = matshow(mat.imag, **kwargs)
+    ax_real.set_title("Real")
+    ax_imag.set_title("Imag")
+    return ax_real, ax_imag
 
 
 # -- Methods ---------------------------------------------------------------------------

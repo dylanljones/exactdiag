@@ -26,6 +26,7 @@ from .basis import (
 
 from .matrix import (
     matshow,
+    cmatshow,
     transpose,
     hermitian,
     is_hermitian,
