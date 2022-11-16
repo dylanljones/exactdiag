@@ -2,7 +2,7 @@
 #
 # This code is part of exactdiag.
 #
-# Copyright (c) 2022, Dylan Jones
+# Copyright (c) 2022, Dylan Jones, Andreas Weh
 
 """This module contains tools for working with linear operators in sparse format.
 
