@@ -64,6 +64,13 @@ from .greens import (
     gf_tevo,
 )
 
+from .disorder import (
+    DisorderGenerator,
+    DiagonalDisorder,
+    SubstDiagonalDisorder,
+    BinaryDiagonalDisorder,
+)
+
 try:
     from ._version import version as __version__
 except ImportError:
