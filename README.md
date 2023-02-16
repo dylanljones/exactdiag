@@ -187,7 +187,7 @@ gf = ed.gf_lehmann(model, z, i=3, sigma=ed.UP)[0]
 </p>
 
 
-[tests-badge]: https://img.shields.io/github/workflow/status/dylanljones/exactdiag/Test/master?label=test&logo=github&style=flat
+[tests-badge]: https://img.shields.io/github/actions/workflow/status/dylanljones/exactdiag/test.yml?branch=master&label=test&logo=github&style=flat
 [license-badge]: https://img.shields.io/github/license/dylanljones/exactdiag?color=lightgrey&style=flat-square
 [black-badge]: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square
 
