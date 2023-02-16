@@ -68,10 +68,12 @@ def gf0_resolvent(ham, z, mode="diag"):
     elif "trace".startswith(mode):
         # Trace of GF matrix
         gf = np.trace(gfmat, axis1=-2, axis2=-1)
+    elif "mean".startswith(mode):
+        # Trace of GF matrix
+        gf = np.trace(gfmat, axis1=-2, axis2=-1) / ham.shape[0]
     else:
         raise ValueError(
-            f"Mode '{mode}' not supported. "
-            f"Valid modes are 'full', 'diag' or 'total'"
+            f"Mode '{mode}' not supported. Valid modes are 'full', 'diag' or 'total'"
         )
     return gf
 
@@ -129,13 +131,43 @@ def gf0_eig(*args, z, mode="diag") -> np.ndarray:
     elif "trace".startswith(mode):
         # Trace of GF matrix
         gf = np.sum(xi, axis=-1)
+    elif "mean".startswith(mode):
+        # Trace of GF matrix
+        gf = np.mean(xi, axis=-1)
     else:
         raise ValueError(
-            f"Mode '{mode}' not supported. "
-            f"Valid modes are 'full', 'diag' or 'total'"
+            f"Mode '{mode}' not supported. Valid modes are 'full', 'diag' or 'total'"
         )
 
     return gf
+
+
+def _eig2local(xi, rv, mode):
+    """Transform `xi` in the eigen-basis into the local basis."""
+    if "eigen".startswith(mode):
+        return xi
+
+    lv = rv.conj().T
+    if "full".startswith(mode) or "matrix".startswith(mode):
+        # Full GF matrix
+        xi = (rv * xi[..., np.newaxis, :]) @ lv
+    elif "diag".startswith(mode):
+        # Diagonal of GF matrix
+        xi = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
+    elif "trace".startswith(mode):
+        # Trace of GF matrix
+        diag = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
+        xi = np.sum(diag, axis=-1)
+    elif "mean".startswith(mode):
+        # Trace of GF matrix
+        diag = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
+        xi = np.mean(diag, axis=-1)
+    else:
+        raise ValueError(
+            f"Mode '{mode}' not supported. Valid modes are "
+            f"'eigen', 'full', 'diag' or 'total'"
+        )
+    return xi
 
 
 def gf0_pole(*args, z, mode="diag") -> np.ndarray:
@@ -149,7 +181,7 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
 
     Parameters
     ----------
-    *args : tuple of np.ndarray
+    *args : tuple of np.ndarray or np.ndarray
         Input arguments. This can either be a tuple of size two, containing arrays of
         eigenvalues and eigenvectors or a single argument, interpreted as
         Hamilton-operator H and used to compute the eigenvalues and eigenvectors used in
@@ -174,7 +206,7 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
         xi, rv = np.linalg.eigh(args[0])
     else:
         xi, rv = args
-    lv = rv.conj().T
+    # lv = rv.conj().T
 
     mode = mode.lower()
 
@@ -184,24 +216,104 @@ def gf0_pole(*args, z, mode="diag") -> np.ndarray:
     else:
         xi = 1 / (z - xi)
 
-    if "full".startswith(mode) or "matrix".startswith(mode):
-        # Full GF matrix
-        # gf = np.einsum("ik,...k,kj->...ij", lv, xi, rv)
-        gf = (rv * xi[..., np.newaxis, :]) @ lv
-    elif "diag".startswith(mode):
-        # Diagonal of GF matrix
-        gf = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
-    elif "trace".startswith(mode):
-        # Trace of GF matrix
-        diag = ((transpose(lv) * rv) @ xi[..., np.newaxis])[..., 0]
-        gf = np.sum(diag, axis=-1)
-    else:
-        raise ValueError(
-            f"Mode '{mode}' not supported. "
-            f"Valid modes are 'full', 'diag' or 'total'"
-        )
+    # Change of basis (if required)
+    return _eig2local(xi, rv, mode)
 
-    return gf
+
+def gf0_tt_ret(*args, t, mode="diag"):
+    r"""Calculates the real time retarded Green's function in the local basis.
+
+    The real time Green's function in the eigen-basis is defined as
+    .. math::
+        G_n(t) = -i Θ(t) e^{-i E_n t}
+
+    where .math:`E_i` is the i-th eigenvalue of the Hamiltonian H.
+
+    Parameters
+    ----------
+    *args : tuple of np.ndarray
+        Input arguments. This can either be a tuple of size two, containing arrays of
+        eigenvalues and eigenvectors or a single argument, interpreted as
+        Hamilton-operator H and used to compute the eigenvalues and eigenvectors used in
+        the calculation.
+    t : (...) complex np.ndarray or complex
+        Green's function is evaluated at real times `t`.
+    mode : str, optional
+        The output mode of the method. Can either be 'eig', 'full', 'diag' or 'trace'.
+        The default mode is 'diag'. Mode 'full' computes the full Green's function
+        matrix, 'diag' the diagonal and 'trace' computes the trace of the Green's
+        function matrix.
+
+    Returns
+    -------
+    gf : complex np.ndarray
+        The Green's function evaluated at `t` in the local basis. The shape depends
+        on the specified mode. The shape for mode 'full' is (..., N, N),
+        the shape for mode 'diag' is (..., N) and the shape for mode 'trace' is the
+        same shape as the input shape of `t`.
+    """
+    t = np.atleast_1d(t)
+    if np.all(t <= 0):
+        raise ValueError("Retarded Green's function only well defined if all `t>=0`!")
+    if len(args) == 1:
+        xi, rv = np.linalg.eigh(args[0])
+    else:
+        xi, rv = args
+
+    # Construct the (retarded) Green's function in the eigen-basis
+    tt = t[:, np.newaxis]
+    xi = np.where(tt >= 0, -1j * np.exp(-1j * xi * tt, where=(tt >= 0)), 0)
+
+    # Change of basis (if required)
+    return _eig2local(xi, rv, mode)
+
+
+def gf0_tt_adv(*args, t, mode="diag"):
+    r"""Calculates the real time advanced Green's function in the local basis.
+
+    The real time Green's function in the eigen-basis is defined as
+    .. math::
+        G_n(t) = -i Θ(t) e^{-i E_n t}
+
+    where .math:`E_i` is the i-th eigenvalue of the Hamiltonian H.
+
+    Parameters
+    ----------
+    *args : tuple of np.ndarray
+        Input arguments. This can either be a tuple of size two, containing arrays of
+        eigenvalues and eigenvectors or a single argument, interpreted as
+        Hamilton-operator H and used to compute the eigenvalues and eigenvectors used in
+        the calculation.
+    t : (...) complex np.ndarray or complex
+        Green's function is evaluated at real times `t`.
+    mode : str, optional
+        The output mode of the method. Can either be 'eig', 'full', 'diag' or 'trace'.
+        The default mode is 'diag'. Mode 'full' computes the full Green's function
+        matrix, 'diag' the diagonal and 'trace' computes the trace of the Green's
+        function matrix.
+
+    Returns
+    -------
+    gf : complex np.ndarray
+        The Green's function evaluated at `t` in the local basis. The shape depends
+        on the specified mode. The shape for mode 'full' is (..., N, N),
+        the shape for mode 'diag' is (..., N) and the shape for mode 'trace' is the
+        same shape as the input shape of `t`.
+    """
+    t = np.atleast_1d(t)
+    if np.all(t <= 0):
+        raise ValueError("Advanced Green's function only well defined if all `t<=0`!")
+    if len(args) == 1:
+        xi, rv = np.linalg.eigh(args[0])
+    else:
+        xi, rv = args
+
+    # Construct the (retarded) Green's function in the eigen-basis
+    tt = t[:, np.newaxis]
+    xi = np.where(tt <= 0, +1j * np.exp(-1j * xi * tt, where=(tt <= 0)), 0)
+
+    # Change of basis (if required)
+    return _eig2local(xi, rv, mode)
 
 
 def solve_sector(
