@@ -7,4 +7,4 @@
 from .abc import ModelParameters, AbstractManyBodyModel
 from .hubbard import HubbardModel
 from .anderson import SingleImpurityAndersonModel
-from .ising import AbstractIsingModel
+from .ising import AbstractIsingModel, IsingModel

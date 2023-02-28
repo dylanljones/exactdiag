@@ -4,8 +4,9 @@
 #
 # Copyright (c) 2023, Dylan Jones
 
+import bisect
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import linalg as sla, csr_matrix
 from abc import ABC, abstractmethod
 from .abc import ModelParameters
 from ..operators import HamiltonOperator
@@ -63,3 +64,78 @@ class AbstractIsingModel(ModelParameters, ABC):
     def hamiltonian(self, states=None, dtype=None):
         data, indices = self.hamiltonian_data(states)
         return csr_matrix((data, indices), dtype=dtype)
+
+
+class IsingModel(AbstractIsingModel):
+    def __init__(self, latt, jz=-1.0, hx=0.0, hz=0.0):
+        super().__init__(latt.num_sites, jz=jz, hx=hx, hz=hz)
+        self.latt = latt
+
+    def _hamiltonian_data(self, states):
+        for i, state in enumerate(states):
+            for site1 in range(self.nsites):
+                op1 = 1 << site1
+                # sz.sz
+                if self.jz:
+                    val = 0
+                    for site2 in self.latt.nearest_neighbors(site1, unique=True):
+                        op2 = 1 << site2
+                        if bool(op1 & state) == bool(op2 & state):
+                            val += self.jz
+                        else:
+                            val -= self.jz
+                    yield i, i, val
+                # sz
+                if self.hz:
+                    val = -self.hz if bool(op1 & state) else self.hz
+                    yield i, i, val
+                # sx
+                if self.hx:
+                    # index of state with flipped bit
+                    new_state = state ^ op1
+                    # j = np.searchsorted(states, new_state)
+                    j = bisect.bisect_left(states, new_state)
+                    yield i, j, self.hx
+
+    def ground_state(self, thresh=10):
+        ham = self.hamilton_operator()
+        if self.nsites >= thresh:
+            return sla.eigsh(ham, k=1)  # noqa
+        else:
+            energies, vectors = np.linalg.eigh(ham.toarray())
+            idx = np.argmin(energies)
+            return energies[idx], vectors[:, idx]
+
+
+def compute_magnetization(psi):
+    r"""Computes the magnetization `M` of the state `ψ`.
+
+    The magnetization .math:`M = ⟨ψ|\hat{M}|ψ⟩`is the expectation value of the operator
+    .. math::
+
+        \hat{M} = \frac{1}{N} \sum_{i=1}^{N} σ^z_i
+
+    Parameters
+    ----------
+    psi : (N, ) np.ndarray
+        The state used to compute the magnetization.
+
+    Returns
+    -------
+    mag : float
+        The magentization of the system in the state.
+    """
+    magnetization = 0
+    nsites = int(np.log2(len(psi)))
+    psi2 = np.square(psi)
+    for i in range(len(psi)):
+        state = i
+        mag = 0
+        for site in range(nsites):
+            op = 1 << site
+            s = 1 if bool(state & op) else -1
+            mag += s * psi2[i]
+        mag = abs(mag) / nsites
+        assert -1e-10 <= mag <= 1.0 + 1e-10
+        magnetization += max(0.0, min(mag, 1.0))
+    return magnetization
