@@ -6,7 +6,7 @@
 
 import numpy as np
 from scipy.sparse import linalg as sla
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 class LinearOperator(sla.LinearOperator, ABC):
@@ -83,3 +83,49 @@ class LinearOperator(sla.LinearOperator, ABC):
         except AttributeError:
             pass
         return scaled
+
+
+class TimeEvolutionOperator(LinearOperator, ABC):
+    def __init__(self, size, t=0.0):
+        super().__init__((size, size), dtype=np.complex128)
+        self.time = t
+
+    def set_time(self, t):
+        self.time = t
+
+    @abstractmethod
+    def _build(self, t):
+        pass
+
+    def matvec(self, x):
+        if self.time == 0:
+            return x
+        ut = self._build(self.time)
+        return np.dot(ut, x)
+
+    def build(self):
+        if self.time == 0:
+            return np.eye(self.shape[0])
+        return self._build(self.time)
+
+    def evolve(self, t, x):
+        self.set_time(t)
+        return self.matvec(x)
+
+    def __call__(self, t, x=None):
+        self.set_time(t)
+        if x is None:
+            return self
+        else:
+            return self.matvec(x)
+
+
+class Tevo(TimeEvolutionOperator):
+    def __init__(self, *args, t=0.0):
+        xi, rv = np.linalg.eigh(args[0]) if len(args) == 1 else args
+        self.xi, self.rv, self.lv = xi, rv, rv.conj().T
+        super().__init__(len(xi), t)
+
+    def _build(self, t):
+        xi = np.exp(-1j * self.xi * t)
+        return np.dot(self.rv.conj(), np.dot(np.diag(xi), self.lv))
