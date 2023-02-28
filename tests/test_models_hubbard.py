@@ -10,6 +10,7 @@ from numpy.testing import assert_array_equal
 from exactdiag.matrix import is_hermitian
 from exactdiag.models import HubbardModel
 import exactdiag as ed
+from exactdiag import operators
 
 
 def test_hubbard_sector_1_1():
@@ -64,8 +65,8 @@ def generate_operators(basis):
     c_up, c_dn = list(), list()
     sector = basis.get_sector()
     for i in range(basis.num_sites):
-        _cdg_up = ed.CreationOperator(sector, sector, i, ed.UP).toarray()
-        _cdg_dn = ed.CreationOperator(sector, sector, i, ed.DN).toarray()
+        _cdg_up = operators.CreationOperator(sector, sector, i, ed.UP).toarray()
+        _cdg_dn = operators.CreationOperator(sector, sector, i, ed.DN).toarray()
         cdg_up.append(_cdg_up)
         cdg_dn.append(_cdg_dn)
         c_up.append(_cdg_up.T.conj())

@@ -10,7 +10,7 @@ import gftool as gt
 from pytest import mark
 from numpy.testing import assert_allclose
 import exactdiag as ed
-from exactdiag.greens import gf0_resolvent, gf0_pole, gf_lehmann
+from exactdiag.greens import gf0_resolvent, gf0_pole, gf_lehmann, gf_tevo
 
 
 def tight_binding_hamiltonian(latt, eps=0.0, hop=1.0):
@@ -77,8 +77,8 @@ def test_gf_tevo_hubbard_non_interacting(num_sites, sigma):
     for pos in range(num_sites):
         gf0_z = gf0_z_diag[:, pos]
 
-        t, gf_tevo = ed.gf_tevo(model, start, stop, num, pos, sigma=sigma)
-        gf_z = gt.fourier.tt2z(t, gf_tevo, z)
+        t, gf_t = gf_tevo(model, start, stop, num, pos, sigma=sigma)
+        gf_z = gt.fourier.tt2z(t, gf_t, z)
         assert_allclose(gf_z, gf0_z, rtol=1e-4, atol=1e-2)
 
 
