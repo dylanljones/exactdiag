@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from collections import defaultdict
 from typing import Union, Iterable, Tuple, List
 
-
 __all__ = [
     "UP",
     "DN",

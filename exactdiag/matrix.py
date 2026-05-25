@@ -41,7 +41,6 @@ transpose = partial(np.swapaxes, axis1=-2, axis2=-1)
 
 
 class MidpointNormalize(colors.Normalize):
-
     """Mid-point colormap normalization
 
     References
