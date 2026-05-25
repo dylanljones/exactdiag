@@ -25,7 +25,6 @@ from scipy.sparse import csr_matrix
 from .basis import UP, SPIN_CHARS
 from .op import LinearOperator
 
-
 __all__ = [
     "project_up",
     "project_dn",
