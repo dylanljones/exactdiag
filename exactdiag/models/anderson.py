@@ -9,7 +9,6 @@ from typing import Union, Sequence
 from .abc import AbstractManyBodyModel
 from ..operators import project_onsite_energy, project_hopping, project_hubbard_inter
 
-
 # =========================================================================
 # Single impurity anderson model
 # =========================================================================

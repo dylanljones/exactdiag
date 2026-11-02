@@ -15,7 +15,6 @@ from scipy.sparse.linalg.interface import IdentityOperator
 from scipy.sparse.linalg._onenormest import onenormest
 from scipy.linalg.decomp_qr import qr
 
-
 __all__ = ["expm_multiply"]
 
 
